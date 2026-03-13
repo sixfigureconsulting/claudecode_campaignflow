@@ -302,7 +302,7 @@ CREATE POLICY "Service role can manage subscriptions"
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO subscriptions (user_id, status, trial_ends_at)
+  INSERT INTO public.subscriptions (user_id, status, trial_ends_at)
   VALUES (
     NEW.id,
     'trialing',
@@ -310,7 +310,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

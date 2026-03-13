@@ -43,7 +43,7 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} method="post" className="space-y-5">
       {serverError && (
         <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600">
           {serverError}

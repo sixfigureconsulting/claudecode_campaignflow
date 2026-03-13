@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { getInitials } from "@/lib/utils";
@@ -65,8 +64,7 @@ export function ClientsList({ clients }: { clients: any[] }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {clients.map((client) => (
           <div key={client.id} className="relative group/card">
-            <Link href={`/clients/${client.id}`}>
-              <Card className="h-full hover:shadow-md hover:border-brand-200 transition-all cursor-pointer group">
+              <Card className="h-full hover:shadow-md hover:border-brand-200 transition-all cursor-pointer group" onClick={() => router.push(`/clients/${client.id}`)}>
                 <CardContent className="p-5">
                   <div className="flex items-start gap-3 mb-4">
                     <div className="w-11 h-11 bg-brand-100 text-brand-700 rounded-xl flex items-center justify-center text-base font-bold shrink-0">
@@ -123,18 +121,17 @@ export function ClientsList({ clients }: { clients: any[] }) {
                   </div>
                 </CardContent>
               </Card>
-            </Link>
 
-            {/* Actions menu — sits above the Link */}
+            {/* Actions menu — sits above the card */}
             <div
               className="absolute top-3 right-3 z-10"
-              onClick={(e) => e.preventDefault()}
+              onClick={(e) => e.stopPropagation()}
             >
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover/card:opacity-100 transition-opacity focus:opacity-100"
-                    onClick={(e) => e.preventDefault()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="h-4 w-4" />
                   </button>

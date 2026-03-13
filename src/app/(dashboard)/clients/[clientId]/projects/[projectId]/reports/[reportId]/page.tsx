@@ -8,6 +8,7 @@ import { MetricsList } from "@/components/reports/MetricsList";
 import { CSVUploadSection } from "@/components/reports/CSVUploadSection";
 import { ManualMetricsForm } from "@/components/reports/ManualMetricsForm";
 import { AIRecommendationSection } from "@/components/ai/AIRecommendationSection";
+import { CustomMetricsCard } from "@/components/reports/CustomMetricsCard";
 import { computeFunnelMetrics } from "@/lib/funnel";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Calendar } from "lucide-react";
@@ -51,6 +52,7 @@ export default async function ReportPage({
 
   const metrics = report.report_metrics ?? [];
   const funnelMetrics = computeFunnelMetrics(metrics);
+  const customMetrics = metrics.filter((m: any) => m.metric_category === "custom");
 
   // Fetch existing AI recommendation if any
   const { data: aiRecommendation } = await supabase
@@ -120,6 +122,7 @@ export default async function ReportPage({
       {metrics.length > 0 && (
         <>
           <FunnelVisualization metrics={funnelMetrics} />
+          <CustomMetricsCard metrics={customMetrics} />
           <MetricsList
             metrics={metrics}
             reportId={reportId}
