@@ -113,3 +113,80 @@ export const aiRecommendationRequestSchema = z.object({
 });
 
 export type AIRecommendationRequest = z.infer<typeof aiRecommendationRequestSchema>;
+
+// ── Integration Config ────────────────────────────────────────────────────────
+
+export const INTEGRATION_SERVICES = ["apollo", "heyreach", "instantly", "openai", "hubspot", "slack"] as const;
+
+export const integrationConfigSchema = z.object({
+  service: z.enum(INTEGRATION_SERVICES),
+  api_key: z.string().min(10, "API key appears too short").max(2000, "API key appears too long"),
+});
+
+export type IntegrationConfigFormData = z.infer<typeof integrationConfigSchema>;
+
+// ── Execution Action Requests ─────────────────────────────────────────────────
+
+export const apolloEnrichRequestSchema = z.object({
+  projectId: z.string().uuid(),
+});
+
+export const sfcSequenceRequestSchema = z.object({
+  projectId: z.string().uuid(),
+});
+
+export type ApolloEnrichRequest = z.infer<typeof apolloEnrichRequestSchema>;
+export type SFCSequenceRequest = z.infer<typeof sfcSequenceRequestSchema>;
+
+// ── Campaign Workflow ─────────────────────────────────────────────────────────
+
+export const fetchApolloLeadsSchema = z.object({
+  projectId: z.string().uuid(),
+  apolloListId: z.string().optional(),
+});
+
+export const qualifyLeadsSchema = z.object({
+  projectId: z.string().uuid(),
+  leads: z.array(z.object({
+    first_name: z.string(),
+    last_name: z.string(),
+    email: z.string(),
+    company: z.string(),
+    title: z.string(),
+    linkedin_url: z.string().nullable().optional(),
+    website: z.string().nullable().optional(),
+  })),
+  icpDescription: z.string().min(10, "ICP description too short"),
+});
+
+export const checkExclusionsSchema = z.object({
+  projectId: z.string().uuid(),
+  leads: z.array(z.object({
+    email: z.string(),
+    first_name: z.string(),
+    last_name: z.string(),
+    company: z.string(),
+    title: z.string(),
+  })),
+});
+
+export const generateSequencesSchema = z.object({
+  projectId: z.string().uuid(),
+  leads: z.array(z.object({
+    first_name: z.string(),
+    last_name: z.string(),
+    email: z.string(),
+    company: z.string(),
+    title: z.string(),
+    linkedin_url: z.string().nullable().optional(),
+    website: z.string().nullable().optional(),
+  })),
+  channels: z.array(z.enum(["linkedin", "email"])).min(1),
+  offerContext: z.string().min(10, "Offer context too short"),
+});
+
+export const pushLeadsSchema = z.object({
+  projectId: z.string().uuid(),
+  leads: z.array(z.any()),
+  destinations: z.array(z.enum(["instantly", "hubspot", "csv"])).min(1),
+});

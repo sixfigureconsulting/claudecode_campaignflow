@@ -3,10 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { AddReportDialog } from "@/components/reports/AddReportDialog";
-import { ReportsList } from "@/components/reports/ReportsList";
-import { MetricsCharts } from "@/components/charts/MetricsCharts";
 import { ArrowLeft } from "lucide-react";
+import { decryptApiKey, maskApiKey } from "@/lib/encryption";
+import { ProjectTabs } from "@/components/projects/ProjectTabs";
 
 export const metadata: Metadata = { title: "Project" };
 
@@ -36,6 +35,40 @@ export default async function ProjectPage({
 
   const client = (project as any).clients;
 
+  // Fetch integration configs (masked for client)
+  const { data: rawConfigs } = await supabase
+    .from("integration_configs")
+    .select("service, api_key_encrypted, updated_at")
+    .eq("project_id", projectId);
+
+  const integrationConfigs = (rawConfigs ?? []).flatMap((row) => {
+    try {
+      return [{
+        service: row.service,
+        masked_key: maskApiKey(decryptApiKey(row.api_key_encrypted)),
+        updated_at: row.updated_at,
+      }];
+    } catch {
+      return [];
+    }
+  });
+
+  // Fetch recent executions
+  const { data: executions } = await supabase
+    .from("executions")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  // Check if user has Anthropic key configured
+  const { data: aiConfig } = await supabase
+    .from("ai_configs")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("provider", "anthropic")
+    .single();
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Breadcrumb */}
@@ -63,25 +96,17 @@ export default async function ProjectPage({
             )}
           </div>
         </div>
-        <AddReportDialog projectId={project.id} />
       </div>
 
-      {/* Trend charts (show if 2+ reports) */}
-      {(project.reports ?? []).length >= 2 && (
-        <MetricsCharts reports={project.reports} />
-      )}
-
-      {/* Reports list */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">
-          Reports ({project.reports?.length ?? 0})
-        </h2>
-        <ReportsList
-          reports={project.reports ?? []}
-          clientId={clientId}
-          projectId={project.id}
-        />
-      </div>
+      {/* Tabbed content */}
+      <ProjectTabs
+        projectId={project.id}
+        clientId={clientId}
+        reports={project.reports ?? []}
+        integrationConfigs={integrationConfigs}
+        executions={(executions ?? []) as any}
+        hasAnthropicKey={!!aiConfig}
+      />
     </div>
   );
 }

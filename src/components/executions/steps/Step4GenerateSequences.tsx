@@ -1,0 +1,257 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, XCircle, AlertCircle, Loader2, Zap, Linkedin, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import type { CampaignLead } from "@/types/database";
+
+const OFFER_STORAGE_KEY = (projectId: string) => `cf_offer_${projectId}`;
+
+export function Step4GenerateSequences({
+  projectId,
+  leads,
+  hasOpenAIKey,
+  hasHeyreachKey,
+  onComplete,
+}: {
+  projectId: string;
+  leads: CampaignLead[];
+  hasOpenAIKey: boolean;
+  hasHeyreachKey: boolean;
+  onComplete: (leads: CampaignLead[]) => void;
+}) {
+  const [channels, setChannels] = useState<Set<string>>(new Set(["email"]));
+  const [offerContext, setOfferContext] = useState<string>(() => {
+    try { return localStorage.getItem(OFFER_STORAGE_KEY(projectId)) ?? ""; } catch { return ""; }
+  });
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const [results, setResults] = useState<CampaignLead[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const saveOffer = (val: string) => {
+    setOfferContext(val);
+    try { localStorage.setItem(OFFER_STORAGE_KEY(projectId), val); } catch {}
+  };
+
+  const toggleChannel = (ch: string) => {
+    setChannels((prev) => {
+      const next = new Set(prev);
+      if (next.has(ch)) next.delete(ch);
+      else next.add(ch);
+      return next;
+    });
+  };
+
+  const handleGenerate = async () => {
+    setStatus("loading");
+    setMessage("");
+
+    const res = await fetch("/api/executions/generate-sequences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectId,
+        leads,
+        channels: Array.from(channels),
+        offerContext,
+      }),
+    });
+    const json = await res.json();
+
+    if (!res.ok) {
+      setMessage(json.error ?? "Sequence generation failed.");
+      setStatus("error");
+      return;
+    }
+
+    setResults(json.leads);
+    setStatus("done");
+    setMessage(json.summary);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Channel selection */}
+      <div>
+        <label className="text-sm font-medium text-foreground block mb-2">Channels</label>
+        <div className="flex gap-2">
+          <button
+            onClick={() => toggleChannel("linkedin")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+              channels.has("linkedin")
+                ? "border-blue-300 bg-blue-50 text-blue-700"
+                : "border-border text-muted-foreground hover:border-muted-foreground"
+            }`}
+          >
+            <Linkedin className="h-4 w-4" />
+            LinkedIn
+            {channels.has("linkedin") && <CheckCircle2 className="h-3.5 w-3.5" />}
+            {!hasHeyreachKey && channels.has("linkedin") && (
+              <span className="text-xs text-amber-600">(no Heyreach)</span>
+            )}
+          </button>
+          <button
+            onClick={() => toggleChannel("email")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+              channels.has("email")
+                ? "border-purple-300 bg-purple-50 text-purple-700"
+                : "border-border text-muted-foreground hover:border-muted-foreground"
+            }`}
+          >
+            <Mail className="h-4 w-4" />
+            Cold Email
+            {channels.has("email") && <CheckCircle2 className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Offer context */}
+      <div>
+        <label className="text-sm font-medium text-foreground block mb-1.5">
+          Offer / Context
+          <span className="ml-1.5 text-xs font-normal text-muted-foreground">(saved per project)</span>
+        </label>
+        <Textarea
+          placeholder={`Describe what you're offering and why it's relevant. e.g.:\n"We help B2B SaaS companies reduce churn by 30% through automated customer success workflows. Our clients typically see results within 60 days. We're offering a free 2-week pilot."`}
+          className="text-sm min-h-[100px] resize-y"
+          value={offerContext}
+          onChange={(e) => saveOffer(e.target.value)}
+        />
+      </div>
+
+      {!hasOpenAIKey && (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Add your OpenAI API key in the Integrations tab to generate sequences.
+        </div>
+      )}
+
+      <Button
+        variant="gradient"
+        className="w-full"
+        disabled={channels.size === 0 || !offerContext.trim() || !hasOpenAIKey || status === "loading"}
+        loading={status === "loading"}
+        onClick={handleGenerate}
+      >
+        <Zap className="h-4 w-4 mr-2" />
+        {status === "loading" ? `Generating sequences...` : `Generate sequences for ${leads.length} leads`}
+      </Button>
+
+      {status === "error" && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-600 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {message}
+        </div>
+      )}
+      {status === "loading" && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Writing personalised sequences... this may take a minute for large lists.
+        </div>
+      )}
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              {message}
+            </p>
+          </div>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {results.map((lead, i) => {
+              const key = `${lead.email}-${i}`;
+              const isOpen = expanded === key;
+              const hasSeq = !!lead.sequence;
+              return (
+                <div key={key} className="border rounded-lg overflow-hidden">
+                  <button
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/40 transition-colors text-left"
+                    onClick={() => setExpanded(isOpen ? null : key)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {hasSeq ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                      )}
+                      <span className="font-medium">{lead.first_name} {lead.last_name}</span>
+                      <span className="text-xs text-muted-foreground">{lead.title} @ {lead.company}</span>
+                    </div>
+                    {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </button>
+
+                  {isOpen && lead.sequence && (
+                    <div className="border-t divide-y text-xs bg-muted/20">
+                      {channels.has("linkedin") && (lead.sequence.linkedin_step1 || lead.sequence.linkedin_step2) && (
+                        <>
+                          {lead.sequence.linkedin_step1 && (
+                            <div className="px-3 py-2.5 space-y-1">
+                              <div className="flex items-center gap-1.5 font-medium text-blue-600">
+                                <Linkedin className="h-3 w-3" />
+                                LinkedIn Connection Request
+                              </div>
+                              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{lead.sequence.linkedin_step1}</p>
+                            </div>
+                          )}
+                          {lead.sequence.linkedin_step2 && (
+                            <div className="px-3 py-2.5 space-y-1">
+                              <div className="flex items-center gap-1.5 font-medium text-blue-600">
+                                <Linkedin className="h-3 w-3" />
+                                LinkedIn Follow-up (Day 3)
+                              </div>
+                              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{lead.sequence.linkedin_step2}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {channels.has("email") && (lead.sequence.email_body1 || lead.sequence.email_body2) && (
+                        <>
+                          {lead.sequence.email_body1 && (
+                            <div className="px-3 py-2.5 space-y-1">
+                              <div className="flex items-center gap-1.5 font-medium text-purple-600">
+                                <Mail className="h-3 w-3" />
+                                Cold Email #1
+                              </div>
+                              {lead.sequence.email_subject1 && (
+                                <p className="font-medium">Subject: {lead.sequence.email_subject1}</p>
+                              )}
+                              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{lead.sequence.email_body1}</p>
+                            </div>
+                          )}
+                          {lead.sequence.email_body2 && (
+                            <div className="px-3 py-2.5 space-y-1">
+                              <div className="flex items-center gap-1.5 font-medium text-purple-600">
+                                <Mail className="h-3 w-3" />
+                                Email Follow-up
+                              </div>
+                              {lead.sequence.email_subject2 && (
+                                <p className="font-medium">Subject: {lead.sequence.email_subject2}</p>
+                              )}
+                              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{lead.sequence.email_body2}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <Button
+            variant="gradient"
+            className="w-full"
+            onClick={() => onComplete(results)}
+          >
+            Continue to push →
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
