@@ -1,11 +1,11 @@
 import { CheckCircle2, ArrowRight } from "lucide-react";
 
 const SOLUTIONS = [
-  "Upload any CSV report from any ad platform in seconds",
-  "Automatically maps Traffic → Leads → Opportunities → Customers",
-  "Computes CPL, CAC, ROI, and ROAS instantly",
-  "Generates AI analysis that pinpoints your exact bottleneck",
-  "Delivers 5 tactical steps and 3 strategic plays — not generic fluff",
+  "Import lead lists from Apollo, Instantly, LinkedIn, or any CSV",
+  "Automatically maps Prospects → Contacted → Replied → Booked → Closed",
+  "Computes reply rate, meeting rate, close rate, and CPM instantly",
+  "Generates AI analysis that pinpoints your exact sequence bottleneck",
+  "Delivers 5 tactical fixes and 3 strategic plays — not generic fluff",
 ];
 
 export function LandingSolution() {
@@ -21,7 +21,7 @@ export function LandingSolution() {
               One platform that does the heavy lifting
             </h2>
             <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-              CampaignFlow Pro is your performance intelligence hub. Upload data, see the full picture,
+              CampaignFlow Pro is your outbound intelligence hub. Import your leads, see the full picture,
               and get AI recommendations you can act on today — not in three meetings.
             </p>
 
@@ -39,16 +39,16 @@ export function LandingSolution() {
           <div className="bg-gradient-to-br from-brand-950 to-brand-800 rounded-2xl p-6 shadow-2xl">
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs text-brand-300 mb-4">
-                <span>Q1 2025 — Google Ads Campaign</span>
+                <span>Q1 2025 — Cold Email Campaign</span>
                 <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Active</span>
               </div>
 
               {/* Funnel bars */}
               {[
-                { label: "Traffic", value: "24,800", width: "100%", color: "bg-brand-400/30" },
-                { label: "Leads", value: "1,488", width: "60%", color: "bg-brand-400/50" },
-                { label: "Opportunities", value: "446", width: "35%", color: "bg-brand-400/70" },
-                { label: "Customers", value: "89", width: "20%", color: "bg-brand-400" },
+                { label: "Prospects", value: "5,000", width: "100%", color: "bg-brand-400/30" },
+                { label: "Contacted", value: "4,200", width: "84%", color: "bg-brand-400/50" },
+                { label: "Replied", value: "630", width: "40%", color: "bg-brand-400/70" },
+                { label: "Meetings Booked", value: "126", width: "20%", color: "bg-brand-400" },
               ].map((bar) => (
                 <div key={bar.label}>
                   <div className="flex items-center justify-between text-xs text-brand-200 mb-1">
@@ -66,22 +66,22 @@ export function LandingSolution() {
 
               <div className="mt-4 pt-4 border-t border-brand-700 grid grid-cols-3 gap-3">
                 <div className="text-center">
-                  <p className="text-xs text-brand-400">CPL</p>
-                  <p className="text-sm font-bold text-white">$23.15</p>
+                  <p className="text-xs text-brand-400">Reply Rate</p>
+                  <p className="text-sm font-bold text-white">15%</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-brand-400">CAC</p>
-                  <p className="text-sm font-bold text-white">$386</p>
+                  <p className="text-xs text-brand-400">Meeting Rate</p>
+                  <p className="text-sm font-bold text-white">2.5%</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-brand-400">ROI</p>
-                  <p className="text-sm font-bold text-green-400">+312%</p>
+                  <p className="text-xs text-brand-400">CPM</p>
+                  <p className="text-sm font-bold text-green-400">$31</p>
                 </div>
               </div>
 
               <div className="mt-3 p-3 bg-brand-700/30 rounded-lg">
                 <p className="text-xs text-brand-300 italic">
-                  "Primary bottleneck: Lead → Opportunity rate at 30%. Improve qualification email within 24h of opt-in..."
+                  "Primary bottleneck: Reply → Meeting rate at 20%. Improve call-to-action in follow-up step 2 — add a specific time slot offer..."
                 </p>
               </div>
             </div>

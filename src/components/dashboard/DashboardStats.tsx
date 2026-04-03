@@ -36,14 +36,14 @@ function StatCard({ label, value, icon, color, description }: StatCardProps) {
 export function DashboardStats({ stats }: { stats: DashboardStats }) {
   const cards: StatCardProps[] = [
     {
-      label: "Total Revenue",
+      label: "Pipeline Generated",
       value: formatCurrency(stats.totalRevenue),
       icon: <DollarSign className="h-5 w-5 text-green-600" />,
       color: "bg-green-50",
-      description: "Across all reports",
+      description: "Across all campaigns",
     },
     {
-      label: "Total Leads",
+      label: "Total Prospects",
       value: formatNumber(stats.totalLeads),
       icon: <Users className="h-5 w-5 text-blue-600" />,
       color: "bg-blue-50",
@@ -55,11 +55,11 @@ export function DashboardStats({ stats }: { stats: DashboardStats }) {
       color: "bg-orange-50",
     },
     {
-      label: "Avg ROI",
+      label: "Avg Reply Rate",
       value: `${stats.avgROI.toFixed(1)}%`,
       icon: <TrendingUp className="h-5 w-5 text-brand-600" />,
       color: "bg-brand-50",
-      description: "Across all campaigns",
+      description: "Across all sequences",
     },
     {
       label: "Active Clients",

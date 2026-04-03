@@ -25,11 +25,10 @@ import {
 import { toast } from "@/components/ui/toast";
 
 const PROJECT_TYPES = [
-  { value: "outbound", label: "Outbound" },
-  { value: "seo", label: "SEO" },
-  { value: "ads", label: "Paid Ads" },
-  { value: "social", label: "Social Media" },
-  { value: "email", label: "Email Marketing" },
+  { value: "cold_email", label: "Cold Email" },
+  { value: "linkedin", label: "LinkedIn Outreach" },
+  { value: "multi_channel", label: "Multi-Channel Sequence" },
+  { value: "cold_call", label: "Cold Calling" },
   { value: "custom", label: "Custom" },
 ];
 
@@ -108,7 +107,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
             <Label htmlFor="edit-proj-name">Project Name *</Label>
             <Input
               id="edit-proj-name"
-              placeholder="Q1 Google Ads Campaign"
+              placeholder="Q1 Cold Email — SaaS Decision Makers"
               error={errors.name?.message}
               {...register("name")}
             />

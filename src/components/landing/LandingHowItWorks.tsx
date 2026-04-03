@@ -6,13 +6,13 @@ const STEPS = [
   },
   {
     step: "02",
-    title: "Create a project",
-    description: "Define the campaign type — Ads, SEO, Outbound, Email, Social, or Custom.",
+    title: "Create a campaign",
+    description: "Define the outbound type — Cold Email, LinkedIn Outreach, Multi-Channel Sequence, or Custom.",
   },
   {
     step: "03",
-    title: "Upload or enter metrics",
-    description: "Upload a CSV from any platform or manually enter your KPIs. We handle the mapping.",
+    title: "Import leads or enter metrics",
+    description: "Import from Apollo, Instantly, or any CSV. Or manually enter your sequence KPIs. We handle the mapping.",
   },
   {
     step: "04",
@@ -35,7 +35,7 @@ export function LandingHowItWorks() {
             How It Works
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            From data dump to action plan in minutes
+            From lead list to action plan in minutes
           </h2>
           <p className="text-gray-600 text-lg max-w-xl mx-auto">
             No complex setup. No integrations required. Just results.

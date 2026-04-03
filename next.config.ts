@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["crypto-js"],
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       {

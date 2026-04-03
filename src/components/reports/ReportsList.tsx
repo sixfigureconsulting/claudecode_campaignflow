@@ -20,7 +20,7 @@ import type { ReportWithMetrics } from "@/types";
 
 interface ReportsListProps {
   reports: ReportWithMetrics[];
-  clientId: string;
+  clientId?: string;
   projectId: string;
 }
 
@@ -66,7 +66,7 @@ export function ReportsList({ reports, clientId, projectId }: ReportsListProps) 
 
           return (
             <div key={report.id} className="relative group/row">
-              <Link href={`/clients/${clientId}/projects/${projectId}/reports/${report.id}`}>
+              <Link href={`/campaigns/${projectId}/reports/${report.id}`}>
                 <Card className="hover:shadow-md hover:border-brand-200 transition-all cursor-pointer group">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">

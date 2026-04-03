@@ -1,6 +1,60 @@
 // Auto-generated types aligned with Supabase schema
 
-export type ProjectType = "outbound" | "seo" | "ads" | "social" | "email" | "custom";
+export type ProjectType = "cold_email" | "linkedin" | "multi_channel" | "cold_call" | "custom";
+
+// ── Execution Layer ──────────────────────────────────────────────────────────
+
+export type IntegrationService = "apollo" | "apify" | "heyreach" | "instantly" | "openai" | "hubspot" | "slack";
+export type ExecutionStatus = "pending" | "running" | "completed" | "failed";
+export type ActionType = "apollo_enrich" | "sfc_sequence_builder" | "campaign_workflow";
+
+export type CampaignLead = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  company: string;
+  title: string;
+  linkedin_url?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  qualified?: boolean;
+  qualification_reason?: string;
+  excluded?: boolean;
+  exclusion_reason?: string;
+  exclusion_source?: string;
+  sequence?: {
+    linkedin_step1?: string;
+    linkedin_step2?: string;
+    email_subject1?: string;
+    email_body1?: string;
+    email_subject2?: string;
+    email_body2?: string;
+  };
+  push_results?: Record<string, { success: boolean; message: string }>;
+};
+
+export interface IntegrationConfig {
+  id: string;
+  project_id: string;
+  service: IntegrationService;
+  api_key_encrypted: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Execution {
+  id: string;
+  project_id: string;
+  action_type: ActionType;
+  status: ExecutionStatus;
+  inputs_summary: string | null;
+  outputs_summary: string | null;
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+// ── Original types ───────────────────────────────────────────────────────────
 export type ReportType = "weekly" | "monthly" | "custom";
 export type MetricCategory = "traffic" | "leads" | "revenue" | "cost" | "custom";
 export type AIProvider = "openai" | "anthropic";

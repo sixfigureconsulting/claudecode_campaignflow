@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Users,
+  Megaphone,
   Settings,
   CreditCard,
   TrendingUp,
@@ -20,9 +20,9 @@ const navItems = [
     exact: true,
   },
   {
-    href: "/clients",
-    label: "Clients",
-    icon: Users,
+    href: "/campaigns",
+    label: "Campaigns",
+    icon: Megaphone,
   },
   {
     href: "/billing",

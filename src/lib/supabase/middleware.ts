@@ -39,7 +39,10 @@ export async function updateSession(request: NextRequest) {
 
   // Public routes that don't require auth
   const publicRoutes = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/auth/callback", "/callback"];
-  const isPublicRoute = publicRoutes.some((r) => pathname === r || pathname.startsWith("/api/stripe/webhook"));
+  const isPublicRoute =
+    publicRoutes.some((r) => pathname === r) ||
+    pathname.startsWith("/api/stripe/webhook") ||
+    pathname.startsWith("/api/v1/");
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();

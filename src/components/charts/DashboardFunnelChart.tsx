@@ -24,7 +24,7 @@ export function DashboardFunnelChart({ data }: DashboardFunnelChartProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Revenue by Client</CardTitle>
+        <CardTitle className="text-base">Revenue by Campaign</CardTitle>
       </CardHeader>
       <CardContent>
         {!hasData ? (

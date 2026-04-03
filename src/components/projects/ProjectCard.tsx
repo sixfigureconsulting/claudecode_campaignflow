@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Megaphone, Search, Mail, Share2, MousePointer, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { FileText, Mail, Linkedin, Phone, Layers, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,30 +18,25 @@ import { EditProjectDialog } from "./EditProjectDialog";
 import { toast } from "@/components/ui/toast";
 
 const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  outbound: {
-    icon: <Megaphone className="h-5 w-5" />,
-    color: "bg-blue-100 text-blue-600",
-    label: "Outbound",
-  },
-  seo: {
-    icon: <Search className="h-5 w-5" />,
-    color: "bg-green-100 text-green-600",
-    label: "SEO",
-  },
-  ads: {
-    icon: <MousePointer className="h-5 w-5" />,
-    color: "bg-orange-100 text-orange-600",
-    label: "Paid Ads",
-  },
-  social: {
-    icon: <Share2 className="h-5 w-5" />,
-    color: "bg-pink-100 text-pink-600",
-    label: "Social",
-  },
-  email: {
+  cold_email: {
     icon: <Mail className="h-5 w-5" />,
+    color: "bg-blue-100 text-blue-600",
+    label: "Cold Email",
+  },
+  linkedin: {
+    icon: <Linkedin className="h-5 w-5" />,
+    color: "bg-sky-100 text-sky-600",
+    label: "LinkedIn Outreach",
+  },
+  multi_channel: {
+    icon: <Layers className="h-5 w-5" />,
     color: "bg-purple-100 text-purple-600",
-    label: "Email",
+    label: "Multi-Channel",
+  },
+  cold_call: {
+    icon: <Phone className="h-5 w-5" />,
+    color: "bg-green-100 text-green-600",
+    label: "Cold Calling",
   },
   custom: {
     icon: <FileText className="h-5 w-5" />,

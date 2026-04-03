@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 
 const FAQS = [
   {
-    question: "Do I need to connect my ad accounts?",
-    answer: "No native integrations are required. You simply upload a CSV export from any platform (Google Ads, Meta, HubSpot, etc.) or enter metrics manually. Native integrations are on the roadmap.",
+    question: "Do I need to connect my outbound tools?",
+    answer: "No native integrations are required. You simply import a CSV export from Apollo, Instantly, LinkedIn Sales Navigator, or any other tool — or enter metrics manually. Native integrations are on the roadmap.",
   },
   {
     question: "How does the AI recommendation work?",
-    answer: "You bring your own OpenAI or Anthropic API key. We construct a structured prompt using your client data, funnel metrics, and period-over-period comparison, then call the AI on your behalf from our server. Your key is AES-256 encrypted at rest.",
+    answer: "You bring your own OpenAI or Anthropic API key. We construct a structured prompt using your client data, outbound funnel metrics, and period-over-period comparison, then call the AI on your behalf from our server. Your key is AES-256 encrypted at rest.",
   },
   {
     question: "Is my data secure?",
@@ -19,11 +19,11 @@ const FAQS = [
   },
   {
     question: "Can I use this for multiple clients?",
-    answer: "Absolutely. The platform is designed for agencies. You get unlimited clients, each with unlimited projects and reports on paid plans.",
+    answer: "Absolutely. The platform is designed for agencies running outbound for multiple accounts. You get unlimited clients, each with unlimited campaigns and reports on paid plans.",
   },
   {
     question: "What CSV formats do you support?",
-    answer: "Any standard CSV with column headers. You get a visual column mapper to assign each column to the right metric category (traffic, leads, revenue, cost). It works with Google Ads, Meta, GA4 exports, and custom spreadsheets.",
+    answer: "Any standard CSV with column headers. You get a visual column mapper to assign each column to the right metric category (prospects, replies, meetings, revenue, cost). It works with Apollo, Instantly, LinkedIn, and custom spreadsheets.",
   },
   {
     question: "Can I export reports?",

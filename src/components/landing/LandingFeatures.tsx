@@ -12,26 +12,26 @@ import {
 const FEATURES = [
   {
     icon: Upload,
-    title: "CSV Upload & Auto-Mapping",
-    description: "Drop any CSV from Google Ads, Meta, HubSpot, or custom tools. We detect columns and map them to your funnel automatically.",
+    title: "Lead List Import",
+    description: "Import contacts from Apollo, Instantly, LinkedIn exports, or any CSV. We map columns to your outbound funnel automatically.",
     color: "text-blue-600 bg-blue-50",
   },
   {
     icon: TrendingUp,
-    title: "Full Funnel Engine",
-    description: "Instantly computes Traffic → Lead %, Lead → Opportunity %, Opp → Customer %, CPL, CAC, ROI, and ROAS.",
+    title: "Outbound Funnel Engine",
+    description: "Instantly tracks Prospects → Contacted → Replied → Meeting Booked → Closed, plus reply rate, meeting rate, and close rate.",
     color: "text-green-600 bg-green-50",
   },
   {
     icon: Sparkles,
-    title: "AI Recommendation Reports",
-    description: "Get executive summaries, KPI analysis, bottleneck identification, 5 tactical action steps, and 3 strategic improvements — powered by OpenAI or Claude.",
+    title: "AI Sequence Recommendations",
+    description: "Get messaging analysis, bottleneck identification, 5 tactical fixes, and 3 strategic plays — powered by OpenAI or Claude.",
     color: "text-brand-600 bg-brand-50",
   },
   {
     icon: BarChart2,
     title: "Visual Performance Dashboard",
-    description: "Funnel charts, revenue trends, conversion rate graphs, and cost analysis — all in a modern, clean interface.",
+    description: "Outbound funnel charts, reply rate trends, sequence conversion graphs — all in a modern, clean interface.",
     color: "text-purple-600 bg-purple-50",
   },
   {
@@ -49,13 +49,13 @@ const FEATURES = [
   {
     icon: Users,
     title: "Client Portfolio Management",
-    description: "Organize by Client → Project → Report. Perfect for agency owners managing multiple accounts.",
+    description: "Organize by Client → Campaign → Report. Perfect for agency owners running outbound for multiple accounts.",
     color: "text-teal-600 bg-teal-50",
   },
   {
     icon: Zap,
     title: "Week-Over-Week Comparison",
-    description: "AI automatically compares your current report with the previous period and highlights what changed and why.",
+    description: "AI automatically compares your current campaign with the previous period and highlights what changed and why.",
     color: "text-yellow-600 bg-yellow-50",
   },
 ];
@@ -67,10 +67,10 @@ export function LandingFeatures() {
         <div className="text-center mb-12">
           <p className="text-brand-600 text-sm font-semibold tracking-wide uppercase mb-3">Features</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            Everything you need to run tighter campaigns
+            Everything you need to run tighter outbound
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Built specifically for agency owners, consultants, and performance marketers who are tired of spending their Sundays in spreadsheets.
+            Built for agency owners, SDR leads, and outbound consultants who are tired of guessing why their sequences aren't converting.
           </p>
         </div>
 

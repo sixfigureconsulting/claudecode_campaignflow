@@ -44,7 +44,7 @@ export type ClientFormData = z.infer<typeof clientSchema>;
 
 export const projectSchema = z.object({
   name: z.string().min(1, "Project name is required").max(100),
-  project_type: z.enum(["outbound", "seo", "ads", "social", "email", "custom"]),
+  project_type: z.enum(["cold_email", "linkedin", "multi_channel", "cold_call", "custom"]),
   description: z.string().max(500).optional().or(z.literal("")),
 });
 
@@ -116,7 +116,7 @@ export type AIRecommendationRequest = z.infer<typeof aiRecommendationRequestSche
 
 // ── Integration Config ────────────────────────────────────────────────────────
 
-export const INTEGRATION_SERVICES = ["apollo", "heyreach", "instantly", "openai", "hubspot", "slack"] as const;
+export const INTEGRATION_SERVICES = ["apollo", "apify", "heyreach", "instantly", "openai", "hubspot", "slack"] as const;
 
 export const integrationConfigSchema = z.object({
   service: z.enum(INTEGRATION_SERVICES),
@@ -140,6 +140,18 @@ export type SFCSequenceRequest = z.infer<typeof sfcSequenceRequestSchema>;
 
 // ── Campaign Workflow ─────────────────────────────────────────────────────────
 
+const leadShape = z.object({
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+  company: z.string().optional().default(""),
+  title: z.string().optional().default(""),
+  linkedin_url: z.string().nullable().optional(),
+  website: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+});
+
+
 export const fetchApolloLeadsSchema = z.object({
   projectId: z.string().uuid(),
   apolloListId: z.string().optional(),
@@ -147,42 +159,20 @@ export const fetchApolloLeadsSchema = z.object({
 
 export const qualifyLeadsSchema = z.object({
   projectId: z.string().uuid(),
-  leads: z.array(z.object({
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string(),
-    company: z.string(),
-    title: z.string(),
-    linkedin_url: z.string().nullable().optional(),
-    website: z.string().nullable().optional(),
-  })),
-  icpDescription: z.string().min(10, "ICP description too short"),
+  leads: z.array(leadShape),
+  icpDescription: z.string().optional().default(""),
 });
 
 export const checkExclusionsSchema = z.object({
   projectId: z.string().uuid(),
-  leads: z.array(z.object({
-    email: z.string(),
-    first_name: z.string(),
-    last_name: z.string(),
-    company: z.string(),
-    title: z.string(),
-  })),
+  leads: z.array(leadShape),
 });
 
 export const generateSequencesSchema = z.object({
   projectId: z.string().uuid(),
-  leads: z.array(z.object({
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string(),
-    company: z.string(),
-    title: z.string(),
-    linkedin_url: z.string().nullable().optional(),
-    website: z.string().nullable().optional(),
-  })),
-  channels: z.array(z.enum(["linkedin", "email"])).min(1),
-  offerContext: z.string().min(10, "Offer context too short"),
+  leads: z.array(leadShape),
+  channels: z.array(z.string()).optional().default(["email"]),
+  offerContext: z.string().optional().default(""),
 });
 
 export const pushLeadsSchema = z.object({
@@ -190,3 +180,9 @@ export const pushLeadsSchema = z.object({
   leads: z.array(z.any()),
   destinations: z.array(z.enum(["instantly", "hubspot", "csv"])).min(1),
 });
+
+export type FetchApolloLeadsRequest = z.infer<typeof fetchApolloLeadsSchema>;
+export type QualifyLeadsRequest = z.infer<typeof qualifyLeadsSchema>;
+export type CheckExclusionsRequest = z.infer<typeof checkExclusionsSchema>;
+export type GenerateSequencesRequest = z.infer<typeof generateSequencesSchema>;
+export type PushLeadsRequest = z.infer<typeof pushLeadsSchema>;

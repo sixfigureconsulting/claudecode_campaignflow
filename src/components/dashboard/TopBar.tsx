@@ -14,14 +14,14 @@ import {
   X,
   TrendingUp,
   LayoutDashboard,
-  Users,
+  Megaphone,
   CreditCard,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/clients",   label: "Clients",   icon: Users },
+  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/billing",   label: "Billing",   icon: CreditCard },
   { href: "/settings",  label: "Settings",  icon: Settings },
 ];

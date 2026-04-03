@@ -102,7 +102,7 @@ export function AIConfigForm({
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-sm font-medium">OpenAI</span>
-                  <code className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  <code className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded max-w-[200px] truncate">
                     {existingOpenAI.maskedKey}
                   </code>
                 </div>
@@ -118,7 +118,7 @@ export function AIConfigForm({
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-sm font-medium">Anthropic</span>
-                  <code className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  <code className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded max-w-[200px] truncate">
                     {existingAnthropic.maskedKey}
                   </code>
                 </div>

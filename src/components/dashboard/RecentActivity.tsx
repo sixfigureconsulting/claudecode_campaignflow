@@ -6,32 +6,25 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { FileText, Calendar } from "lucide-react";
 
-export function RecentActivity({ clients }: { clients: any[] }) {
-  // Flatten all reports from all clients/projects, sorted by created_at
+export function RecentActivity({ campaigns }: { campaigns: any[] }) {
   const allReports: Array<{
     id: string;
     name: string;
     report_date: string;
     report_type: string;
-    clientName: string;
-    clientId: string;
-    projectName: string;
-    projectId: string;
+    campaignName: string;
+    campaignId: string;
   }> = [];
 
-  clients.forEach((client) => {
-    (client.projects ?? []).forEach((project: any) => {
-      (project.reports ?? []).forEach((report: any) => {
-        allReports.push({
-          id: report.id,
-          name: report.name,
-          report_date: report.report_date,
-          report_type: report.report_type,
-          clientName: client.name,
-          clientId: client.id,
-          projectName: project.name,
-          projectId: project.id,
-        });
+  campaigns.forEach((campaign) => {
+    (campaign.reports ?? []).forEach((report: any) => {
+      allReports.push({
+        id: report.id,
+        name: report.name,
+        report_date: report.report_date,
+        report_type: report.report_type,
+        campaignName: campaign.name,
+        campaignId: campaign.id,
       });
     });
   });
@@ -48,14 +41,14 @@ export function RecentActivity({ clients }: { clients: any[] }) {
       <CardContent>
         {recent.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            No reports yet. Create a client and add a project to get started.
+            No reports yet. Create a campaign and add a report to get started.
           </p>
         ) : (
           <div className="divide-y divide-border">
             {recent.map((report) => (
               <Link
                 key={report.id}
-                href={`/clients/${report.clientId}/projects/${report.projectId}/reports/${report.id}`}
+                href={`/campaigns/${report.campaignId}/reports/${report.id}`}
                 className="flex items-center gap-4 py-3 hover:bg-muted -mx-2 px-2 rounded-lg transition-colors"
               >
                 <div className="w-9 h-9 bg-brand-50 rounded-lg flex items-center justify-center shrink-0">
@@ -63,14 +56,10 @@ export function RecentActivity({ clients }: { clients: any[] }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{report.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {report.clientName} → {report.projectName}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{report.campaignName}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <Badge variant="outline" className="text-xs mb-1">
-                    {report.report_type}
-                  </Badge>
+                  <Badge variant="outline" className="text-xs mb-1">{report.report_type}</Badge>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                     <Calendar className="h-3 w-3" />
                     {formatDate(report.report_date)}

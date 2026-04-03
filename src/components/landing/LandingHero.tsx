@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, TrendingUp, BarChart2, Zap } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 
 export function LandingHero() {
   return (
@@ -15,19 +15,19 @@ export function LandingHero() {
       <div className="max-w-4xl mx-auto text-center relative">
         <Badge variant="info" className="mb-5 bg-brand-800/50 text-brand-200 border-brand-700">
           <Zap className="h-3 w-3 mr-1" />
-          AI-Powered Marketing Intelligence
+          AI-Powered Outbound Intelligence
         </Badge>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6">
           Stop Guessing.{" "}
           <span className="gradient-text bg-gradient-to-r from-brand-300 to-cyan-300 bg-clip-text text-transparent">
-            Start Growing.
+            Start Booking.
           </span>
         </h1>
 
         <p className="text-lg sm:text-xl text-brand-200 max-w-2xl mx-auto mb-8 leading-relaxed">
-          CampaignFlow Pro unifies your marketing and sales data, visualizes your entire funnel,
-          and delivers AI-powered action plans that move the needle — not just reports that collect dust.
+          CampaignFlow Pro tracks your outbound sequences, visualizes your entire sales funnel,
+          and delivers AI-powered action plans that fill your pipeline — not just reports that collect dust.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -56,7 +56,7 @@ export function LandingHero() {
         <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto">
           <div className="text-center">
             <p className="text-3xl font-bold text-white">3x</p>
-            <p className="text-xs text-brand-400 mt-0.5">Faster Reporting</p>
+            <p className="text-xs text-brand-400 mt-0.5">More Replies</p>
           </div>
           <div className="text-center border-x border-brand-700">
             <p className="text-3xl font-bold text-white">AI</p>

@@ -2,20 +2,20 @@ import { XCircle } from "lucide-react";
 
 const PAINS = [
   {
-    title: "Data scattered across 6 tools",
-    description: "Google Analytics here, Meta Ads there, HubSpot somewhere else. You spend more time pulling data than acting on it.",
+    title: "Leads falling through the cracks",
+    description: "Apollo here, Instantly there, a spreadsheet somewhere else. No single view of who's been contacted, who replied, who ghosted.",
   },
   {
-    title: "Reports that don't drive decisions",
-    description: "Clients get pretty charts but nobody knows which metric is killing the campaign. Revenue stays flat.",
+    title: "No visibility into sequence performance",
+    description: "You're sending hundreds of emails but can't tell which step is killing conversions — or whether it's the message, the list, or the timing.",
   },
   {
-    title: "You're flying blind on ROI",
-    description: "You know you spent $10k on ads but proving it generated $40k in pipeline? That takes hours of manual math.",
+    title: "You don't know which message is working",
+    description: "You A/B test subject lines but have no structured way to analyze why one sequence books meetings and another gets ignored.",
   },
   {
-    title: "No clear path forward",
-    description: "After all that analysis, you still don't have a prioritized list of what to fix first. You guess, and hope.",
+    title: "No clear next step after a no-reply",
+    description: "After all that effort, you still don't have a prioritized list of what to fix first. You tweak randomly, and hope.",
   },
 ];
 
@@ -28,11 +28,11 @@ export function LandingProblem() {
             The Problem
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Agency owners waste 12+ hours a week{" "}
-            <span className="text-red-400">just on reporting</span>
+            Outbound teams burn hours every week{" "}
+            <span className="text-red-400">with nothing to show for it</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            And yet, despite all that effort, clients still can't see where their money is going — or why growth is stalling.
+            And yet, despite sending thousands of emails, clients still can't see why pipeline is thin — or which lever to pull next.
           </p>
         </div>
 
