@@ -14,11 +14,11 @@ type SourceConfig = {
   id: string;
   label: string;
   description: string;
-  icon: string;          // emoji or short string
-  color: string;         // tailwind bg class
+  logo: string;          // clearbit logo domain or direct URL
+  color: string;         // tailwind bg + border class
   modes: string[];       // which campaign types this appears in
   inputType: "apollo_url" | "apify_url" | "csv" | "webhook" | "clay" | "crm_url" | "gsheet_url" | "coming_soon";
-  settingsService?: string; // matching key in integrations
+  settingsService?: string;
   ctaLabel: string;
   placeholder?: string;
 };
@@ -29,7 +29,7 @@ const SOURCES: SourceConfig[] = [
     id: "apollo",
     label: "Apollo.io",
     description: "Pull contacts from Apollo saved lists. Enriches company data automatically.",
-    icon: "🚀",
+    logo: "apollo.io",
     color: "bg-blue-50 border-blue-200 hover:border-blue-400",
     modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
     inputType: "apollo_url",
@@ -41,7 +41,7 @@ const SOURCES: SourceConfig[] = [
     id: "apify",
     label: "Apify",
     description: "Scrape LinkedIn profiles, company directories, or any website via Apify actors.",
-    icon: "🕷️",
+    logo: "apify.com",
     color: "bg-orange-50 border-orange-200 hover:border-orange-400",
     modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
     inputType: "apify_url",
@@ -53,7 +53,7 @@ const SOURCES: SourceConfig[] = [
     id: "sales_navigator",
     label: "Sales Navigator",
     description: "Export from LinkedIn Sales Navigator via CSV or Apify scraper.",
-    icon: "💼",
+    logo: "linkedin.com",
     color: "bg-sky-50 border-sky-200 hover:border-sky-400",
     modes: ["linkedin", "cold_email", "multi_channel"],
     inputType: "csv",
@@ -63,7 +63,7 @@ const SOURCES: SourceConfig[] = [
     id: "hunter",
     label: "Hunter.io",
     description: "Find verified emails from domain search. Export list as CSV and import here.",
-    icon: "🎯",
+    logo: "hunter.io",
     color: "bg-red-50 border-red-200 hover:border-red-400",
     modes: ["cold_email", "multi_channel"],
     inputType: "csv",
@@ -73,7 +73,7 @@ const SOURCES: SourceConfig[] = [
     id: "lusha",
     label: "Lusha",
     description: "Import contacts exported from Lusha's prospecting tool.",
-    icon: "📋",
+    logo: "lusha.com",
     color: "bg-teal-50 border-teal-200 hover:border-teal-400",
     modes: ["cold_email", "cold_call", "multi_channel"],
     inputType: "csv",
@@ -83,7 +83,7 @@ const SOURCES: SourceConfig[] = [
     id: "seamless",
     label: "Seamless.AI",
     description: "Import leads exported from Seamless.AI.",
-    icon: "✨",
+    logo: "seamless.ai",
     color: "bg-indigo-50 border-indigo-200 hover:border-indigo-400",
     modes: ["cold_email", "cold_call"],
     inputType: "csv",
@@ -93,29 +93,27 @@ const SOURCES: SourceConfig[] = [
     id: "clay",
     label: "Clay",
     description: "Import enriched lead tables exported from Clay as CSV.",
-    icon: "🧱",
+    logo: "clay.com",
     color: "bg-amber-50 border-amber-200 hover:border-amber-400",
     modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
     inputType: "csv",
     ctaLabel: "Upload Clay CSV",
   },
   {
-    id: "csv",
-    label: "CSV Upload",
-    description: "Upload any CSV with contact data. Accepts most standard export formats.",
-    icon: "📄",
-    color: "bg-gray-50 border-gray-200 hover:border-gray-400",
-    modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
+    id: "zoominfo",
+    label: "ZoomInfo",
+    description: "Import contacts exported from ZoomInfo as CSV.",
+    logo: "zoominfo.com",
+    color: "bg-blue-50 border-blue-200 hover:border-blue-400",
+    modes: ["cold_email", "cold_call", "multi_channel"],
     inputType: "csv",
-    ctaLabel: "Upload CSV",
+    ctaLabel: "Upload ZoomInfo CSV",
   },
-
-  // ── Inbound / Intent ──────────────────────────────────────────────────────
   {
     id: "rb2b",
     label: "RB2B",
-    description: "Import anonymous website visitor identifications from RB2B.",
-    icon: "👁️",
+    description: "Import website visitor identifications from RB2B.",
+    logo: "rb2b.com",
     color: "bg-violet-50 border-violet-200 hover:border-violet-400",
     modes: ["custom"],
     inputType: "csv",
@@ -125,7 +123,7 @@ const SOURCES: SourceConfig[] = [
     id: "hubspot",
     label: "HubSpot CRM",
     description: "Pull contacts or deals from HubSpot lists and segments.",
-    icon: "🟠",
+    logo: "hubspot.com",
     color: "bg-orange-50 border-orange-200 hover:border-orange-400",
     modes: ["cold_email", "multi_channel", "custom"],
     inputType: "crm_url",
@@ -137,7 +135,7 @@ const SOURCES: SourceConfig[] = [
     id: "gsheet",
     label: "Google Sheets",
     description: "Paste a public Google Sheet URL containing contact data.",
-    icon: "📊",
+    logo: "sheets.google.com",
     color: "bg-green-50 border-green-200 hover:border-green-400",
     modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
     inputType: "gsheet_url",
@@ -145,24 +143,24 @@ const SOURCES: SourceConfig[] = [
     placeholder: "https://docs.google.com/spreadsheets/d/...",
   },
   {
+    id: "csv",
+    label: "CSV Upload",
+    description: "Upload any CSV with contact data. Accepts most standard export formats.",
+    logo: "__csv__",
+    color: "bg-gray-50 border-gray-200 hover:border-gray-400",
+    modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
+    inputType: "csv",
+    ctaLabel: "Upload CSV",
+  },
+  {
     id: "webhook",
     label: "HTTP / Webhook",
     description: "Receive leads via a webhook URL. POST JSON arrays of contacts.",
-    icon: "🔗",
+    logo: "__webhook__",
     color: "bg-slate-50 border-slate-200 hover:border-slate-400",
     modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
     inputType: "webhook",
     ctaLabel: "Configure Webhook",
-  },
-  {
-    id: "zoominfo",
-    label: "ZoomInfo",
-    description: "Import contacts exported from ZoomInfo as CSV.",
-    icon: "🔵",
-    color: "bg-blue-50 border-blue-200 hover:border-blue-400",
-    modes: ["cold_email", "cold_call", "multi_channel"],
-    inputType: "csv",
-    ctaLabel: "Upload ZoomInfo CSV",
   },
 ];
 
@@ -228,6 +226,52 @@ function extractApolloListId(url: string): string | null {
 
 // ── Source card ───────────────────────────────────────────────────────────────
 
+function SourceLogo({ logo, label }: { logo: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (logo === "__csv__") {
+    return (
+      <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+        <svg className="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (logo === "__webhook__") {
+    return (
+      <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+        <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0 text-sm font-bold text-muted-foreground">
+        {label.slice(0, 2).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`https://logo.clearbit.com/${logo}`}
+      alt={label}
+      className="w-9 h-9 rounded-lg object-contain shrink-0 bg-white border border-border/50 p-1"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function SourceCard({
   source,
   isConnected,
@@ -250,7 +294,7 @@ function SourceCard({
       )}
     >
       <div className="flex items-start gap-3">
-        <span className="text-2xl leading-none mt-0.5">{source.icon}</span>
+        <SourceLogo logo={source.logo} label={source.label} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-sm">{source.label}</span>
@@ -424,7 +468,8 @@ export function Step1LeadInput({
             </button>
             <span className="text-muted-foreground">/</span>
             <span className="text-sm font-medium flex items-center gap-1.5">
-              <span>{source.icon}</span> {source.label}
+              <SourceLogo logo={source.logo} label={source.label} />
+              {source.label}
             </span>
             {isConnected(source) && (
               <Badge className="text-[10px] bg-green-100 text-green-700 border-0">Connected</Badge>
