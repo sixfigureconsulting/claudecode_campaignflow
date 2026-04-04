@@ -59,6 +59,7 @@ export default async function CampaignPage({
 
   const hasKey = (s: string) => integrationConfigs.some((c) => c.service === s);
   const subtype = getCampaignSubtype(campaign);
+
   const typeLabel = CAMPAIGN_TYPE_LABELS[subtype] ?? subtype;
 
   return (
@@ -98,7 +99,9 @@ export default async function CampaignPage({
         </div>
         <CampaignWorkflow
           projectId={campaignId}
+          campaignType={subtype}
           hasApolloKey={hasKey("apollo")}
+          hasApifyKey={hasKey("apify")}
           hasOpenAIKey={hasKey("openai")}
           hasHeyreachKey={hasKey("heyreach")}
           hasInstantlyKey={hasKey("instantly")}

@@ -21,7 +21,9 @@ const STEPS = [
 
 export function CampaignWorkflow({
   projectId,
+  campaignType,
   hasApolloKey,
+  hasApifyKey,
   hasOpenAIKey,
   hasHeyreachKey,
   hasInstantlyKey,
@@ -29,7 +31,9 @@ export function CampaignWorkflow({
   hasSlackKey,
 }: {
   projectId: string;
+  campaignType?: string;
   hasApolloKey: boolean;
+  hasApifyKey?: boolean;
   hasOpenAIKey: boolean;
   hasHeyreachKey: boolean;
   hasInstantlyKey: boolean;
@@ -125,7 +129,10 @@ export function CampaignWorkflow({
         {currentStep === 1 && (
           <Step1LeadInput
             projectId={projectId}
+            campaignType={campaignType}
             hasApolloKey={hasApolloKey}
+            hasApifyKey={hasApifyKey}
+            hasHubSpotKey={hasHubSpotKey}
             onComplete={handleStep1Complete}
           />
         )}
