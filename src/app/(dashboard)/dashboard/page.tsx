@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
-import { CampaignsOverview } from "@/components/dashboard/CampaignsOverview";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-import { DashboardFunnelChart } from "@/components/charts/DashboardFunnelChart";
+import { OutboundAreaChart } from "@/components/charts/OutboundAreaChart";
+import { CampaignAnalyticsTable } from "@/components/dashboard/CampaignAnalyticsTable";
 import { computeFunnelMetrics } from "@/lib/funnel";
-import type { DashboardStats as DashboardStatsType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -18,66 +16,120 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch all campaigns owned by this user (via their clients)
   const { data: campaigns } = await supabase
     .from("projects")
-    .select(`
-      *,
-      clients!inner(user_id),
-      reports (
-        *,
-        report_metrics (*)
-      )
-    `)
+    .select(`*, clients!inner(user_id), reports(*, report_metrics(*))`)
     .eq("clients.user_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Compute aggregate stats
-  let totalRevenue = 0;
-  let totalLeads = 0;
-  let totalSpend = 0;
-  let totalROI = 0;
-  let roiCount = 0;
-  let totalReports = 0;
+  const allCampaigns = campaigns ?? [];
 
-  (campaigns ?? []).forEach((campaign: any) => {
+  // ── Aggregate top-level stats ────────────────────────────────────────────────
+  let totalSent = 0;
+  let totalTraffic = 0;
+  let totalRevenue = 0;
+  let totalSpend = 0;
+  let totalReports = 0;
+  let totalLeads = 0;
+  let totalCustom = 0;
+
+  // ── Per-campaign rows for analytics table ────────────────────────────────────
+  const campaignRows = allCampaigns.map((campaign: any) => {
+    let sent = 0;
+    let opens = 0;
+    let replies = 0;
+    let pipeline = 0;
+    let opportunities = 0;
+
     (campaign.reports ?? []).forEach((report: any) => {
       totalReports++;
-      const funnel = computeFunnelMetrics(report.report_metrics ?? []);
-      totalRevenue += funnel.revenue;
-      totalLeads += funnel.leads;
+      const metrics = report.report_metrics ?? [];
+      const funnel = computeFunnelMetrics(metrics);
+
+      // Map metric categories to outbound concepts
+      const leadsVal = metrics.filter((m: any) => m.metric_category === "leads").reduce((s: number, m: any) => s + m.metric_value, 0);
+      const trafficVal = metrics.filter((m: any) => m.metric_category === "traffic").reduce((s: number, m: any) => s + m.metric_value, 0);
+      const revenueVal = metrics.filter((m: any) => m.metric_category === "revenue").reduce((s: number, m: any) => s + m.metric_value, 0);
+      const customVal = metrics.filter((m: any) => m.metric_category === "custom").reduce((s: number, m: any) => s + m.metric_value, 0);
+
+      sent += leadsVal;
+      opens += trafficVal;
+      replies += customVal;
+      pipeline += revenueVal;
+      opportunities += funnel.customers;
+
+      totalSent += leadsVal;
+      totalTraffic += trafficVal;
+      totalRevenue += revenueVal;
       totalSpend += funnel.spend;
-      if (funnel.roi !== 0) { totalROI += funnel.roi; roiCount++; }
+      totalLeads += leadsVal;
+      totalCustom += customVal;
     });
+
+    return {
+      ...campaign,
+      sent,
+      opens,
+      openRate: sent > 0 ? (opens / sent) * 100 : 0,
+      replies,
+      replyRate: sent > 0 ? (replies / sent) * 100 : 0,
+      pipeline,
+      opportunities,
+    };
   });
 
-  const stats: DashboardStatsType = {
-    totalClients: campaigns?.length ?? 0,
-    totalProjects: campaigns?.length ?? 0,
+  const openRate = totalSent > 0 ? (totalTraffic / totalSent) * 100 : 0;
+  const replyRate = totalSent > 0 ? (totalCustom / totalSent) * 100 : 0;
+
+  // Count meetings booked (customers from funnel)
+  const meetingsBooked = campaignRows.reduce((s: number, c: any) => s + c.opportunities, 0);
+
+  const stats = {
+    totalClients: allCampaigns.length,
+    totalProjects: allCampaigns.length,
     totalReports,
     totalRevenue,
     totalLeads,
     totalSpend,
-    avgROI: roiCount > 0 ? totalROI / roiCount : 0,
-    avgConversionRate: 0,
+    avgROI: replyRate,
+    avgConversionRate: openRate,
+    totalSent,
+    openRate,
+    replyRate,
+    meetingsBooked,
   };
 
-  const revenueByName = (campaigns ?? []).map((c: any) => {
-    let rev = 0;
-    (c.reports ?? []).forEach((r: any) => {
-      rev += computeFunnelMetrics(r.report_metrics ?? []).revenue;
+  // ── Time-series data for area chart ──────────────────────────────────────────
+  // Group reports by date, sum metrics
+  const byDate: Record<string, { sent: number; opens: number; replies: number }> = {};
+
+  allCampaigns.forEach((campaign: any) => {
+    (campaign.reports ?? []).forEach((report: any) => {
+      const dateKey = report.report_date?.slice(0, 10) ?? "";
+      if (!dateKey) return;
+      if (!byDate[dateKey]) byDate[dateKey] = { sent: 0, opens: 0, replies: 0 };
+      const metrics = report.report_metrics ?? [];
+      byDate[dateKey].sent += metrics.filter((m: any) => m.metric_category === "leads").reduce((s: number, m: any) => s + m.metric_value, 0);
+      byDate[dateKey].opens += metrics.filter((m: any) => m.metric_category === "traffic").reduce((s: number, m: any) => s + m.metric_value, 0);
+      byDate[dateKey].replies += metrics.filter((m: any) => m.metric_category === "custom").reduce((s: number, m: any) => s + m.metric_value, 0);
     });
-    return { name: c.name.slice(0, 14), revenue: rev };
   });
+
+  const chartData = Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12)
+    .map(([date, vals]) => ({
+      date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      ...vals,
+    }));
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Outbound performance overview
-          </p>
+          <p className="text-muted-foreground text-sm mt-0.5">Outbound performance overview</p>
         </div>
         <Link href="/campaigns">
           <Button variant="gradient" size="sm">
@@ -87,14 +139,20 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      {/* Metric cards */}
       <DashboardStats stats={stats} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardFunnelChart data={revenueByName} />
-        <CampaignsOverview campaigns={campaigns ?? []} />
+      {/* Area chart — full width */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Activity over time</h2>
+          <span className="text-xs text-muted-foreground border border-border rounded-md px-2.5 py-1">Last {Math.min(chartData.length, 12)} reports</span>
+        </div>
+        <OutboundAreaChart data={chartData} />
       </div>
 
-      <RecentActivity campaigns={campaigns ?? []} />
+      {/* Campaign analytics table */}
+      <CampaignAnalyticsTable campaigns={campaignRows} />
     </div>
   );
 }

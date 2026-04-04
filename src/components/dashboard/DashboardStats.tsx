@@ -1,84 +1,81 @@
 "use client";
 
-import { TrendingUp, Users, FileText, DollarSign, Target, BarChart2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { Info } from "lucide-react";
+import { formatCurrency, formatNumber, cn } from "@/lib/utils";
 import type { DashboardStats } from "@/types";
-import { cn } from "@/lib/utils";
 
-interface StatCardProps {
+interface MetricCardProps {
   label: string;
   value: string;
-  icon: React.ReactNode;
-  color: string;
-  description?: string;
+  secondary?: string;
+  dotColor: string;
+  info?: string;
 }
 
-function StatCard({ label, value, icon, color, description }: StatCardProps) {
+function MetricCard({ label, dotColor, value, secondary, info }: MetricCardProps) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground font-medium">{label}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-            {description && (
-              <p className="text-xs text-muted-foreground mt-1">{description}</p>
-            )}
-          </div>
-          <div className={cn("p-2.5 rounded-xl", color)}>{icon}</div>
+    <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-3 hover:shadow-sm transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", dotColor)} />
+          <span className="text-sm text-muted-foreground font-medium">{label}</span>
         </div>
-      </CardContent>
-    </Card>
+        <Info className="h-3.5 w-3.5 text-muted-foreground/50" />
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-3xl font-bold tracking-tight">{value}</span>
+        {secondary && (
+          <>
+            <span className="text-muted-foreground text-sm">|</span>
+            <span className="text-sm font-semibold text-emerald-600">{secondary}</span>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
-export function DashboardStats({ stats }: { stats: DashboardStats }) {
-  const cards: StatCardProps[] = [
+interface DashboardStatsExtended extends DashboardStats {
+  totalSent: number;
+  openRate: number;
+  replyRate: number;
+  meetingsBooked: number;
+}
+
+export function DashboardStats({ stats }: { stats: DashboardStatsExtended }) {
+  const cards: MetricCardProps[] = [
+    {
+      label: "Total Sent",
+      value: formatNumber(stats.totalSent),
+      dotColor: "bg-amber-400",
+    },
+    {
+      label: "Open Rate",
+      value: `${stats.openRate.toFixed(2)}%`,
+      dotColor: "bg-blue-500",
+    },
+    {
+      label: "Reply Rate",
+      value: `${stats.replyRate.toFixed(2)}%`,
+      dotColor: "bg-slate-400",
+    },
+    {
+      label: "Meetings Booked",
+      value: formatNumber(stats.meetingsBooked),
+      secondary: stats.totalRevenue > 0 ? formatCurrency(stats.totalRevenue) : undefined,
+      dotColor: "bg-purple-500",
+    },
     {
       label: "Pipeline Generated",
       value: formatCurrency(stats.totalRevenue),
-      icon: <DollarSign className="h-5 w-5 text-green-600" />,
-      color: "bg-green-50",
-      description: "Across all campaigns",
-    },
-    {
-      label: "Total Prospects",
-      value: formatNumber(stats.totalLeads),
-      icon: <Users className="h-5 w-5 text-blue-600" />,
-      color: "bg-blue-50",
-    },
-    {
-      label: "Total Spend",
-      value: formatCurrency(stats.totalSpend),
-      icon: <BarChart2 className="h-5 w-5 text-orange-600" />,
-      color: "bg-orange-50",
-    },
-    {
-      label: "Avg Reply Rate",
-      value: `${stats.avgROI.toFixed(1)}%`,
-      icon: <TrendingUp className="h-5 w-5 text-brand-600" />,
-      color: "bg-brand-50",
-      description: "Across all sequences",
-    },
-    {
-      label: "Active Clients",
-      value: formatNumber(stats.totalClients),
-      icon: <Target className="h-5 w-5 text-purple-600" />,
-      color: "bg-purple-50",
-    },
-    {
-      label: "Total Reports",
-      value: formatNumber(stats.totalReports),
-      icon: <FileText className="h-5 w-5 text-pink-600" />,
-      color: "bg-pink-50",
+      dotColor: "bg-emerald-500",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       {cards.map((card) => (
-        <StatCard key={card.label} {...card} />
+        <MetricCard key={card.label} {...card} />
       ))}
     </div>
   );
