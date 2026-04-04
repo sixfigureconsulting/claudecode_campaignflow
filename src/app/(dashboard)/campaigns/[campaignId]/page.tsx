@@ -88,7 +88,6 @@ export default async function CampaignPage({
         integrationConfigs={integrationConfigs ?? []}
         executions={executions ?? []}
         hasAnthropicKey={false}
-        isSubscribed={!!isSubscribed}
       />
     </div>
   );
