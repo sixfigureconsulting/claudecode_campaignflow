@@ -114,7 +114,7 @@ export function BillingPanel({ subscription }: { subscription: Subscription | nu
                 <div className="mb-4">
                   <p className="font-semibold text-lg">Monthly</p>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-bold">$19</span>
+                    <span className="text-3xl font-bold">$97</span>
                     <span className="text-muted-foreground">/month</span>
                   </div>
                 </div>
@@ -148,11 +148,11 @@ export function BillingPanel({ subscription }: { subscription: Subscription | nu
                 <div className="mb-4">
                   <p className="font-semibold text-lg">Yearly</p>
                   <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-bold">$97</span>
+                    <span className="text-3xl font-bold">$497</span>
                     <span className="text-muted-foreground">/year</span>
                   </div>
                   <p className="text-xs text-green-600 mt-1">
-                    Save $131 vs monthly
+                    Save $667 vs monthly
                   </p>
                 </div>
                 <ul className="space-y-2 mb-6">

@@ -9,6 +9,7 @@ import {
   CreditCard,
   TrendingUp,
   ChevronRight,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,11 @@ const navItems = [
     href: "/campaigns",
     label: "Campaigns",
     icon: Megaphone,
+  },
+  {
+    href: "/lists",
+    label: "Lists",
+    icon: Database,
   },
   {
     href: "/billing",

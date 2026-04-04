@@ -16,12 +16,14 @@ import {
   LayoutDashboard,
   Megaphone,
   CreditCard,
+  Database,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
+  { href: "/lists",     label: "Lists",     icon: Database },
   { href: "/billing",   label: "Billing",   icon: CreditCard },
   { href: "/settings",  label: "Settings",  icon: Settings },
 ];

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle2, AlertCircle, Loader2, Users, ArrowLeft, ExternalLink } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Loader2, Users, ArrowLeft, ExternalLink, BookmarkPlus, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CampaignLead } from "@/types/database";
 
@@ -17,7 +17,7 @@ type SourceConfig = {
   logo: string;          // clearbit logo domain or direct URL
   color: string;         // tailwind bg + border class
   modes: string[];       // which campaign types this appears in
-  inputType: "apollo_url" | "apify_url" | "csv" | "webhook" | "hunter_domain" | "hubspot_list" | "gsheet_url" | "calling_api" | "coming_soon";
+  inputType: "apollo_url" | "apify_url" | "csv" | "webhook" | "hunter_domain" | "hubspot_list" | "gsheet_url" | "calling_api" | "saved_list" | "coming_soon";
   settingsService?: string;
   ctaLabel: string;
   placeholder?: string;
@@ -136,6 +136,16 @@ const SOURCES: SourceConfig[] = [
     placeholder: "https://docs.google.com/spreadsheets/d/...",
   },
   {
+    id: "saved_list",
+    label: "Saved Lists",
+    description: "Load a previously saved lead list from your library.",
+    logo: "__saved__",
+    color: "bg-brand-50 border-brand-200 hover:border-brand-400",
+    modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
+    inputType: "saved_list",
+    ctaLabel: "Load List",
+  },
+  {
     id: "csv",
     label: "CSV Upload",
     description: "Upload any CSV with contact data. Accepts most standard export formats.",
@@ -233,11 +243,11 @@ const SOURCES: SourceConfig[] = [
 
 // Which sources appear per campaign type
 const TYPE_PRIORITY: Record<string, string[]> = {
-  cold_email:    ["apollo", "apify", "hunter", "lusha", "seamless", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
-  linkedin:      ["apollo", "apify", "sales_navigator", "gsheet", "csv", "webhook"],
-  multi_channel: ["apollo", "apify", "sales_navigator", "hunter", "lusha", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
-  cold_call:     ["retell", "vapi", "bland", "air", "synthflow", "twilio", "apollo", "apify", "lusha", "seamless", "zoominfo", "gsheet", "csv", "webhook"],
-  custom:        ["apollo", "apify", "rb2b", "hubspot", "gsheet", "csv", "webhook"],
+  cold_email:    ["saved_list", "apollo", "apify", "hunter", "lusha", "seamless", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
+  linkedin:      ["saved_list", "apollo", "apify", "sales_navigator", "gsheet", "csv", "webhook"],
+  multi_channel: ["saved_list", "apollo", "apify", "sales_navigator", "hunter", "lusha", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
+  cold_call:     ["retell", "vapi", "bland", "air", "synthflow", "twilio", "saved_list", "apollo", "apify", "lusha", "seamless", "zoominfo", "gsheet", "csv", "webhook"],
+  custom:        ["saved_list", "apollo", "apify", "rb2b", "hubspot", "gsheet", "csv", "webhook"],
 };
 
 // ── CSV parsing ───────────────────────────────────────────────────────────────
@@ -331,6 +341,14 @@ function extractApolloListId(url: string): string | null {
 
 function SourceLogo({ logo, label }: { logo: string; label: string }) {
   const [failed, setFailed] = useState(false);
+
+  if (logo === "__saved__") {
+    return (
+      <div className="w-9 h-9 rounded-lg bg-brand-100 flex items-center justify-center shrink-0">
+        <Database className="w-5 h-5 text-brand-600" />
+      </div>
+    );
+  }
 
   if (logo === "__csv__") {
     return (
@@ -447,6 +465,25 @@ export function Step1LeadInput({
   const [previewLeads, setPreviewLeads] = useState<CampaignLead[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Save-as-list state
+  const [showSaveList, setShowSaveList] = useState(false);
+  const [saveListName, setSaveListName] = useState("");
+  const [saveListStatus, setSaveListStatus] = useState<"idle" | "saving" | "saved">("idle");
+
+  // Saved lists (for the "Saved Lists" source)
+  const [savedLists, setSavedLists] = useState<{ id: string; name: string; lead_count: number; source: string | null }[]>([]);
+  const [savedListsLoaded, setSavedListsLoaded] = useState(false);
+
+  // Load saved lists when that source is selected
+  useEffect(() => {
+    if (selectedSource === "saved_list" && !savedListsLoaded) {
+      fetch("/api/lists").then((r) => r.json()).then((j) => {
+        setSavedLists(j.lists ?? []);
+        setSavedListsLoaded(true);
+      });
+    }
+  }, [selectedSource, savedListsLoaded]);
+
   const type = campaignType ?? "cold_email";
   const priority = TYPE_PRIORITY[type] ?? TYPE_PRIORITY.cold_email;
   const availableSources = priority
@@ -468,6 +505,18 @@ export function Step1LeadInput({
   const reset = () => {
     setStatus("idle"); setMessage(""); setPreviewLeads([]);
     setInputValue(""); setFile(null);
+    setShowSaveList(false); setSaveListName(""); setSaveListStatus("idle");
+  };
+
+  const handleSaveList = async () => {
+    if (!saveListName.trim() || previewLeads.length === 0) return;
+    setSaveListStatus("saving");
+    await fetch("/api/lists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: saveListName.trim(), source: source?.id ?? "csv", leads: previewLeads }),
+    });
+    setSaveListStatus("saved");
   };
 
   const handleFile = (f: File) => {
@@ -543,6 +592,14 @@ export function Step1LeadInput({
       if (!res.ok) { setMessage(json.error ?? "Failed to fetch Google Sheet."); setStatus("error"); return; }
       setPreviewLeads(json.leads); setStatus("done");
       setMessage(`${json.total} leads imported from Google Sheets`);
+
+    } else if (source.inputType === "saved_list") {
+      // inputValue holds the list ID chosen by the user
+      const res = await fetch(`/api/lists/${inputValue}`);
+      const json = await res.json();
+      if (!res.ok) { setMessage(json.error ?? "Failed to load list."); setStatus("error"); return; }
+      setPreviewLeads(json.leads); setStatus("done");
+      setMessage(`${json.leads.length} leads loaded from "${json.list.name}"`);
 
     } else {
       // coming_soon / webhook / crm — show placeholder
@@ -749,6 +806,48 @@ export function Step1LeadInput({
             </div>
           )}
 
+          {/* Saved list picker */}
+          {source.inputType === "saved_list" && (
+            <div className="space-y-3">
+              {!savedListsLoaded ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading your lists…
+                </div>
+              ) : savedLists.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 p-6 border-2 border-dashed rounded-xl text-center">
+                  <Database className="h-8 w-8 text-muted-foreground/40" />
+                  <p className="text-sm font-medium">No saved lists yet</p>
+                  <p className="text-xs text-muted-foreground">Import leads from any source and save them as a list. They'll appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Select a list to load:</p>
+                  {savedLists.map((l) => (
+                    <button
+                      key={l.id}
+                      onClick={() => setInputValue(l.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all",
+                        inputValue === l.id
+                          ? "border-brand-500 bg-brand-50"
+                          : "border-border hover:border-brand-300"
+                      )}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center shrink-0">
+                        <Database className="h-4 w-4 text-brand-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{l.name}</p>
+                        <p className="text-xs text-muted-foreground">{l.lead_count.toLocaleString()} leads{l.source ? ` · ${l.source}` : ""}</p>
+                      </div>
+                      {inputValue === l.id && <CheckCircle2 className="h-4 w-4 text-brand-500 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Webhook info */}
           {source.inputType === "webhook" && (
             <div className="p-4 bg-muted/40 rounded-xl border border-border text-sm space-y-2">
@@ -793,6 +892,17 @@ export function Step1LeadInput({
               {source.ctaLabel}
             </Button>
           )}
+          {/* Saved list load button (only shown when a list is selected) */}
+          {source.inputType === "saved_list" && inputValue && previewLeads.length === 0 && (
+            <Button
+              variant="gradient"
+              className="w-full"
+              loading={status === "loading"}
+              onClick={handleFetch}
+            >
+              Load Selected List
+            </Button>
+          )}
           {/* Status messages for non-URL input types that fall through to coming_soon */}
           {source.inputType === "coming_soon" && (
             <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-muted-foreground">
@@ -835,6 +945,48 @@ export function Step1LeadInput({
                   </div>
                 )}
               </div>
+              {/* Save as list */}
+              {source?.inputType !== "saved_list" && (
+                <div className="border rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => { setShowSaveList((v) => !v); if (!saveListName) setSaveListName(`${source?.label ?? "Import"} – ${new Date().toLocaleDateString()}`); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <BookmarkPlus className="h-4 w-4" />
+                    Save as list for future use
+                    <span className="ml-auto text-xs">{showSaveList ? "▲" : "▼"}</span>
+                  </button>
+                  {showSaveList && (
+                    <div className="border-t px-4 py-3 bg-muted/20 space-y-2">
+                      {saveListStatus === "saved" ? (
+                        <div className="flex items-center gap-2 text-sm text-green-700">
+                          <CheckCircle2 className="h-4 w-4" /> List saved — find it under <a href="/lists" className="underline font-medium">Lists</a>
+                        </div>
+                      ) : (
+                        <>
+                          <Input
+                            className="text-sm h-9"
+                            placeholder="List name…"
+                            value={saveListName}
+                            onChange={(e) => setSaveListName(e.target.value)}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs"
+                            disabled={!saveListName.trim() || saveListStatus === "saving"}
+                            loading={saveListStatus === "saving"}
+                            onClick={handleSaveList}
+                          >
+                            Save List
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <Button variant="gradient" className="w-full" onClick={() => onComplete(previewLeads)}>
                 Continue with {previewLeads.length} leads →
               </Button>
