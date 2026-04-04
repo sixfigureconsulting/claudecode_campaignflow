@@ -17,7 +17,7 @@ type SourceConfig = {
   logo: string;          // clearbit logo domain or direct URL
   color: string;         // tailwind bg + border class
   modes: string[];       // which campaign types this appears in
-  inputType: "apollo_url" | "apify_url" | "csv" | "webhook" | "hunter_domain" | "hubspot_list" | "gsheet_url" | "calling_api" | "saved_list" | "coming_soon";
+  inputType: "apollo_url" | "apify_url" | "phantombuster_url" | "csv" | "webhook" | "hunter_domain" | "hubspot_list" | "gsheet_url" | "calling_api" | "saved_list" | "coming_soon";
   settingsService?: string;
   ctaLabel: string;
   placeholder?: string;
@@ -49,6 +49,18 @@ const SOURCES: SourceConfig[] = [
     settingsService: "apify",
     ctaLabel: "Fetch from Apify",
     placeholder: "https://api.apify.com/v2/datasets/...",
+  },
+  {
+    id: "phantombuster",
+    label: "PhantomBuster",
+    description: "Import leads from any PhantomBuster phantom — LinkedIn scraper, email finder, Sales Nav extractor, and more.",
+    logo: "phantombuster.com",
+    color: "bg-purple-50 border-purple-200 hover:border-purple-400",
+    modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
+    inputType: "phantombuster_url",
+    settingsService: "phantombuster",
+    ctaLabel: "Fetch from PhantomBuster",
+    placeholder: "https://phantombuster.com/username/phantoms/12345678/...",
   },
   {
     id: "sales_navigator",
@@ -243,11 +255,11 @@ const SOURCES: SourceConfig[] = [
 
 // Which sources appear per campaign type
 const TYPE_PRIORITY: Record<string, string[]> = {
-  cold_email:    ["saved_list", "apollo", "apify", "hunter", "lusha", "seamless", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
-  linkedin:      ["saved_list", "apollo", "apify", "sales_navigator", "gsheet", "csv", "webhook"],
-  multi_channel: ["saved_list", "apollo", "apify", "sales_navigator", "hunter", "lusha", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
-  cold_call:     ["retell", "vapi", "bland", "air", "synthflow", "twilio", "saved_list", "apollo", "apify", "lusha", "seamless", "zoominfo", "gsheet", "csv", "webhook"],
-  custom:        ["saved_list", "apollo", "apify", "rb2b", "hubspot", "gsheet", "csv", "webhook"],
+  cold_email:    ["saved_list", "apollo", "apify", "phantombuster", "hunter", "lusha", "seamless", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
+  linkedin:      ["saved_list", "apollo", "apify", "phantombuster", "sales_navigator", "gsheet", "csv", "webhook"],
+  multi_channel: ["saved_list", "apollo", "apify", "phantombuster", "sales_navigator", "hunter", "lusha", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
+  cold_call:     ["retell", "vapi", "bland", "air", "synthflow", "twilio", "saved_list", "apollo", "apify", "phantombuster", "lusha", "seamless", "zoominfo", "gsheet", "csv", "webhook"],
+  custom:        ["saved_list", "apollo", "apify", "phantombuster", "rb2b", "hubspot", "gsheet", "csv", "webhook"],
 };
 
 // ── CSV parsing ───────────────────────────────────────────────────────────────
@@ -445,6 +457,7 @@ export function Step1LeadInput({
   hasApifyKey,
   hasHubSpotKey,
   hasHunterKey,
+  hasPhantomBusterKey,
   campaignType,
   onComplete,
 }: {
@@ -453,6 +466,7 @@ export function Step1LeadInput({
   hasApifyKey?: boolean;
   hasHubSpotKey?: boolean;
   hasHunterKey?: boolean;
+  hasPhantomBusterKey?: boolean;
   campaignType?: string;
   onComplete: (leads: CampaignLead[]) => void;
 }) {
@@ -497,6 +511,7 @@ export function Step1LeadInput({
     if (s.settingsService === "apify") return !!hasApifyKey;
     if (s.settingsService === "hubspot") return !!hasHubSpotKey;
     if (s.settingsService === "hunter") return !!hasHunterKey;
+    if (s.settingsService === "phantombuster") return !!hasPhantomBusterKey;
     return false; // CSV/gsheet/webhook sources don't need a key
   };
 
@@ -550,6 +565,17 @@ export function Step1LeadInput({
       if (!res.ok) { setMessage(json.error ?? "Failed to fetch leads."); setStatus("error"); return; }
       setPreviewLeads(json.leads); setStatus("done");
       setMessage(`${json.total} leads fetched from Apify`);
+
+    } else if (source.inputType === "phantombuster_url") {
+      const res = await fetch("/api/executions/fetch-phantombuster-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, phantomUrl: inputValue.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setMessage(json.error ?? "Failed to fetch leads."); setStatus("error"); return; }
+      setPreviewLeads(json.leads); setStatus("done");
+      setMessage(`${json.total} leads fetched from PhantomBuster`);
 
     } else if (source.inputType === "csv") {
       if (!file) return;
@@ -706,8 +732,8 @@ export function Step1LeadInput({
 
           {/* URL / text input */}
           {(source.inputType === "apollo_url" || source.inputType === "apify_url" ||
-            source.inputType === "gsheet_url" || source.inputType === "hunter_domain" ||
-            source.inputType === "hubspot_list") && (
+            source.inputType === "phantombuster_url" || source.inputType === "gsheet_url" ||
+            source.inputType === "hunter_domain" || source.inputType === "hubspot_list") && (
             <div className="space-y-2">
               <Input
                 placeholder={source.placeholder}
@@ -720,7 +746,10 @@ export function Step1LeadInput({
                 <p className="text-xs text-muted-foreground">Open your saved list in Apollo, copy the URL from your browser, and paste it here.</p>
               )}
               {source.inputType === "apify_url" && (
-                <p className="text-xs text-muted-foreground">Paste the Apify dataset URL or actor run output URL.</p>
+                <p className="text-xs text-muted-foreground">Paste the Apify dataset URL or actor run output URL. Works with any actor — LinkedIn scraper, domain search, etc.</p>
+              )}
+              {source.inputType === "phantombuster_url" && (
+                <p className="text-xs text-muted-foreground">Paste the phantom URL from your PhantomBuster dashboard. Works with any phantom — LinkedIn scraper, email finder, Sales Nav extractor, etc.</p>
               )}
               {source.inputType === "gsheet_url" && (
                 <p className="text-xs text-muted-foreground">The sheet must be publicly shared (Anyone with link can view).</p>

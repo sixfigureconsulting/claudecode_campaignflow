@@ -29,6 +29,9 @@ export function CampaignWorkflow({
   hasInstantlyKey,
   hasHubSpotKey,
   hasHunterKey,
+  hasPhantomBusterKey,
+  hasSmartleadKey,
+  hasLemlistKey,
   hasSlackKey,
   connectedCallingServices,
 }: {
@@ -41,6 +44,9 @@ export function CampaignWorkflow({
   hasInstantlyKey: boolean;
   hasHubSpotKey: boolean;
   hasHunterKey?: boolean;
+  hasPhantomBusterKey?: boolean;
+  hasSmartleadKey?: boolean;
+  hasLemlistKey?: boolean;
   hasSlackKey: boolean;
   connectedCallingServices?: string[];
 }) {
@@ -138,6 +144,7 @@ export function CampaignWorkflow({
             hasApifyKey={hasApifyKey}
             hasHubSpotKey={hasHubSpotKey}
             hasHunterKey={hasHunterKey}
+            hasPhantomBusterKey={hasPhantomBusterKey}
             onComplete={handleStep1Complete}
           />
         )}
@@ -173,6 +180,9 @@ export function CampaignWorkflow({
             leads={leads}
             hasInstantlyKey={hasInstantlyKey}
             hasHubSpotKey={hasHubSpotKey}
+            hasHeyreachKey={hasHeyreachKey}
+            hasSmartleadKey={hasSmartleadKey}
+            hasLemlistKey={hasLemlistKey}
             connectedCallingServices={connectedCallingServices}
             onComplete={handleStep5Complete}
           />

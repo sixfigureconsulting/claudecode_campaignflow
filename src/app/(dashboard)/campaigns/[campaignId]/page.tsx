@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
 import { getCampaignSubtype, CAMPAIGN_TYPE_LABELS, getDisplayDescription } from "@/components/campaigns/campaignTypes";
 import { CampaignWorkflow } from "@/components/executions/CampaignWorkflow";
+import { CampaignScheduler } from "@/components/executions/CampaignScheduler";
 import { ExecutionHistory } from "@/components/executions/ExecutionHistory";
 
 export const metadata: Metadata = { title: "Campaign" };
@@ -111,9 +112,23 @@ export default async function CampaignPage({
           hasInstantlyKey={hasKey("instantly")}
           hasHubSpotKey={hasKey("hubspot")}
           hasHunterKey={hasKey("hunter")}
+          hasPhantomBusterKey={hasKey("phantombuster")}
+          hasSmartleadKey={hasKey("smartlead")}
+          hasLemlistKey={hasKey("lemlist")}
           hasSlackKey={hasKey("slack")}
           connectedCallingServices={connectedCallingServices}
         />
+      </div>
+
+      {/* Campaign Schedule */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Automation & Schedule</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Set it and forget it — configure a schedule and CampaignFlow runs the pipeline automatically.
+          </p>
+        </div>
+        <CampaignScheduler projectId={campaignId} />
       </div>
 
       {/* Execution history */}

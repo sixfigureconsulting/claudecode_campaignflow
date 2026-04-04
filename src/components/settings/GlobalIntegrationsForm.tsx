@@ -85,6 +85,12 @@ const INTEGRATIONS: Record<string, ServiceMeta> = {
     logo: { type: "initials", initials: "H", bg: "#e53835" },
     fields: [{ key: "api_key", label: "API Key", placeholder: "abc1234def...", required: true, secret: true }],
   },
+  phantombuster: {
+    label: "PhantomBuster", usedIn: "Lead sourcing",
+    description: "Automate LinkedIn scraping, email finding, and more. Works with any phantom you've built.",
+    logo: { type: "initials", initials: "PB", bg: "#7c3aed" },
+    fields: [{ key: "api_key", label: "API Key", placeholder: "your-phantombuster-api-key", required: true, secret: true }],
+  },
 
   // ── AI ─────────────────────────────────────────────────────────────────────
   openai: {
@@ -109,9 +115,23 @@ const INTEGRATIONS: Record<string, ServiceMeta> = {
   },
   smartlead: {
     label: "Smartlead", usedIn: "Email outreach",
-    description: "Sync cold email analytics and reply data from Smartlead campaigns.",
+    description: "Push leads into Smartlead cold email campaigns and sync analytics.",
     logo: { type: "initials", initials: "SL", bg: "#16a34a" },
-    fields: [{ key: "api_key", label: "API Key", placeholder: "sl_live_...", required: true, secret: true }],
+    multiField: true,
+    fields: [
+      { key: "api_key",     label: "API Key",     placeholder: "sl_live_...",  required: true,  secret: true },
+      { key: "campaign_id", label: "Campaign ID", placeholder: "12345",        required: true },
+    ],
+  },
+  lemlist: {
+    label: "Lemlist", usedIn: "Email outreach",
+    description: "Push leads into Lemlist multichannel sequences.",
+    logo: { type: "initials", initials: "LL", bg: "#6366f1" },
+    multiField: true,
+    fields: [
+      { key: "api_key",     label: "API Key",     placeholder: "lem_...",      required: true,  secret: true },
+      { key: "campaign_id", label: "Campaign ID", placeholder: "cam_abc...",   required: true },
+    ],
   },
 
   // ── CRM ────────────────────────────────────────────────────────────────────

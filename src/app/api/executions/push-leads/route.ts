@@ -374,6 +374,110 @@ async function pushToTwilio(leads: Lead[], cfg: Record<string, string>): Promise
   }
 }
 
+// ── New outreach platforms ────────────────────────────────────────────────────
+
+async function pushToSmartlead(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    if (!cfg.api_key || !cfg.campaign_id)
+      return { success: false, count: 0, message: "Smartlead config incomplete — api_key and campaign_id are required." };
+
+    const res = await fetch(
+      `https://server.smartlead.ai/api/v1/campaigns/${cfg.campaign_id}/leads?api_key=${cfg.api_key}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_list: leads.map((l) => ({
+            email: l.email,
+            first_name: l.first_name,
+            last_name: l.last_name,
+            company_name: l.company,
+            phone_number: l.phone ?? "",
+            linkedin_profile: l.linkedin_url ?? "",
+            custom_fields: {
+              title: l.title,
+              email_step1_subject: l.sequence?.email_subject1 ?? "",
+              email_step1_body: l.sequence?.email_body1 ?? "",
+            },
+          })),
+        }),
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? `Smartlead API error ${res.status}`);
+    }
+    return { success: true, count: leads.length, message: `${leads.length} leads added to Smartlead campaign` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+async function pushToLemlist(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    if (!cfg.api_key || !cfg.campaign_id)
+      return { success: false, count: 0, message: "Lemlist config incomplete — api_key and campaign_id are required." };
+
+    let successCount = 0;
+    for (let i = 0; i < leads.length; i += 5) {
+      await Promise.all(
+        leads.slice(i, i + 5).map(async (l) => {
+          if (!l.email) return;
+          const res = await fetch(
+            `https://api.lemlist.com/api/campaigns/${cfg.campaign_id}/leads/${encodeURIComponent(l.email)}?access_token=${cfg.api_key}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                firstName: l.first_name,
+                lastName: l.last_name,
+                companyName: l.company,
+                linkedinUrl: l.linkedin_url ?? "",
+                phone: l.phone ?? "",
+                icebreaker: l.sequence?.email_body1 ?? "",
+              }),
+            }
+          );
+          if (res.ok || res.status === 409) successCount++; // 409 = already in campaign
+        })
+      );
+    }
+    return { success: true, count: successCount, message: `${successCount} leads added to Lemlist campaign` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// ── Webhook / automation tools ────────────────────────────────────────────────
+
+async function pushToWebhook(leads: Lead[], webhookUrl: string, label: string): Promise<PushResult> {
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        leads: leads.map((l) => ({
+          first_name: l.first_name,
+          last_name: l.last_name,
+          email: l.email,
+          company: l.company,
+          title: l.title,
+          phone: l.phone ?? null,
+          linkedin_url: l.linkedin_url ?? null,
+          website: l.website ?? null,
+          sequence: l.sequence ?? null,
+        })),
+        count: leads.length,
+        source: "campaignflow",
+      }),
+    });
+    if (!res.ok) throw new Error(`Webhook responded with ${res.status}`);
+    return { success: true, count: leads.length, message: `${leads.length} leads sent to ${label}` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
 // ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -388,6 +492,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
 
     const { projectId, leads, destinations } = parsed.data;
+    // Webhook URLs for automation tools — provided inline by the user at push time
+    const webhookUrls: Record<string, string> = body.webhookUrls ?? {};
 
     const owned = await verifyOwnership(supabase, projectId, user.id);
     if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -425,6 +531,35 @@ export async function POST(request: NextRequest) {
 
     if (destinations.includes("csv")) {
       results.csv = { success: true, count: leads.length, message: `${leads.length} leads ready to download` };
+    }
+
+    if (destinations.includes("smartlead")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("smartlead");
+        results.smartlead = cfg && typeof cfg === "object"
+          ? await pushToSmartlead(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "Smartlead not configured" };
+      })());
+    }
+
+    if (destinations.includes("lemlist")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("lemlist");
+        results.lemlist = cfg && typeof cfg === "object"
+          ? await pushToLemlist(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "Lemlist not configured" };
+      })());
+    }
+
+    // ── Webhook / automation tools ────────────────────────────────────────────
+
+    for (const tool of ["n8n", "make", "zapier", "clay", "http"] as const) {
+      if (destinations.includes(tool) && webhookUrls[tool]) {
+        const label = { n8n: "n8n", make: "Make", zapier: "Zapier", clay: "Clay", http: "HTTP API" }[tool];
+        tasks.push((async () => {
+          results[tool] = await pushToWebhook(leads as Lead[], webhookUrls[tool], label);
+        })());
+      }
     }
 
     // ── Calling platforms ─────────────────────────────────────────────────────

@@ -198,7 +198,10 @@ export const generateSequencesSchema = z.object({
 });
 
 const PUSH_DESTINATIONS = [
-  "instantly", "hubspot", "csv",
+  // Outreach
+  "instantly", "heyreach", "smartlead", "lemlist", "hubspot", "csv",
+  // Automation / webhooks
+  "n8n", "make", "zapier", "clay", "http",
   // Calling platforms
   "retell", "vapi", "bland", "synthflow", "air", "twilio",
 ] as const;
