@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertCircle, Loader2, Download, Send } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, Loader2, Download, Send, Phone } from "lucide-react";
 import type { CampaignLead } from "@/types/database";
 
 function leadsToCSV(leads: CampaignLead[]): string {
@@ -35,17 +35,21 @@ function leadsToCSV(leads: CampaignLead[]): string {
   return [headers.join(","), ...rows].join("\n");
 }
 
+const CALLING_PLATFORM_IDS = ["retell", "vapi", "bland", "synthflow", "air", "twilio"] as const;
+
 export function Step5Push({
   projectId,
   leads,
   hasInstantlyKey,
   hasHubSpotKey,
+  connectedCallingServices,
   onComplete,
 }: {
   projectId: string;
   leads: CampaignLead[];
   hasInstantlyKey: boolean;
   hasHubSpotKey: boolean;
+  connectedCallingServices?: string[];
   onComplete: (campaignRunId: string | null) => void;
 }) {
   const router = useRouter();
@@ -53,6 +57,9 @@ export function Step5Push({
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [results, setResults] = useState<Record<string, { success: boolean; count: number; message: string }>>({});
   const [campaignRunId, setCampaignRunId] = useState<string | null>(null);
+
+  const connected = connectedCallingServices ?? [];
+  const leadsWithPhone = leads.filter((l) => l.phone?.trim()).length;
 
   const toggle = (dest: string) => {
     setSelected((prev) => {
@@ -83,7 +90,6 @@ export function Step5Push({
     setCampaignRunId(json.campaignRunId ?? null);
     setStatus("done");
 
-    // Trigger CSV download if selected
     if (selected.has("csv")) {
       const csv = leadsToCSV(leads);
       const blob = new Blob([csv], { type: "text/csv" });
@@ -98,22 +104,20 @@ export function Step5Push({
     router.refresh();
   };
 
-  const destinations = [
+  const emailDestinations = [
     {
       id: "instantly",
       label: "Instantly.ai",
       description: "Add leads to an Instantly campaign with email sequences",
       available: hasInstantlyKey,
-      unavailableMsg: "Add Instantly key in Integrations",
-      color: "purple",
+      unavailableMsg: "Add Instantly key in Settings → Integrations",
     },
     {
       id: "hubspot",
       label: "HubSpot CRM",
       description: "Upsert leads as contacts in HubSpot",
       available: hasHubSpotKey,
-      unavailableMsg: "Add HubSpot key in Integrations",
-      color: "orange",
+      unavailableMsg: "Add HubSpot key in Settings → Integrations",
     },
     {
       id: "csv",
@@ -121,49 +125,89 @@ export function Step5Push({
       description: "Export all leads + sequences as a CSV file",
       available: true,
       unavailableMsg: "",
-      color: "green",
     },
   ];
 
+  const callingDestinations = [
+    { id: "bland",     label: "Bland AI",     description: "Dispatch batch outbound calls via Bland AI" },
+    { id: "vapi",      label: "VAPI",          description: "Trigger outbound calls via VAPI voice agents" },
+    { id: "retell",    label: "Retell AI",     description: "Create outbound phone calls via Retell AI" },
+    { id: "synthflow", label: "Synthflow AI",  description: "Send leads to Synthflow for automated calling" },
+    { id: "air",       label: "Air AI",        description: "Dispatch autonomous sales calls via Air AI" },
+    { id: "twilio",    label: "Twilio",        description: "Make outbound calls via Twilio programmable voice" },
+  ];
+
+  const DestButton = ({
+    id, label, description, available, unavailableMsg,
+  }: { id: string; label: string; description: string; available: boolean; unavailableMsg: string }) => {
+    const isSelected = selected.has(id);
+    return (
+      <button
+        disabled={!available}
+        onClick={() => available && toggle(id)}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
+          !available
+            ? "opacity-50 cursor-not-allowed border-border bg-muted/20"
+            : isSelected
+            ? "border-brand-400 bg-brand-50"
+            : "border-border hover:border-muted-foreground bg-muted/20"
+        }`}
+      >
+        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+          isSelected && available ? "border-brand-500 bg-brand-500" : "border-muted-foreground"
+        }`}>
+          {isSelected && available && (
+            <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{label}</span>
+            {!available && <span className="text-xs text-amber-600">{unavailableMsg}</span>}
+          </div>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-5">
-      <div className="space-y-3">
-        {destinations.map((dest) => {
-          const isSelected = selected.has(dest.id);
-          const isAvailable = dest.available;
 
+      {/* ── Email / CRM ─────────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        {emailDestinations.map((dest) => (
+          <DestButton key={dest.id} {...dest} />
+        ))}
+      </div>
+
+      {/* ── Calling platforms ─────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Calling Platforms</p>
+          {leadsWithPhone > 0 && (
+            <span className="text-xs text-muted-foreground">({leadsWithPhone} leads have phone numbers)</span>
+          )}
+        </div>
+        {leadsWithPhone === 0 && (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            No leads have phone numbers. Ensure your leads include a <code className="font-mono">phone</code> field to use calling platforms.
+          </p>
+        )}
+        {callingDestinations.map((dest) => {
+          const available = connected.includes(dest.id);
           return (
-            <button
+            <DestButton
               key={dest.id}
-              disabled={!isAvailable}
-              onClick={() => isAvailable && toggle(dest.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-left transition-colors ${
-                !isAvailable
-                  ? "opacity-50 cursor-not-allowed border-border bg-muted/20"
-                  : isSelected
-                  ? "border-brand-400 bg-brand-50"
-                  : "border-border hover:border-muted-foreground bg-muted/20"
-              }`}
-            >
-              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                isSelected && isAvailable ? "border-brand-500 bg-brand-500" : "border-muted-foreground"
-              }`}>
-                {isSelected && isAvailable && (
-                  <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{dest.label}</span>
-                  {!isAvailable && (
-                    <span className="text-xs text-amber-600">{dest.unavailableMsg}</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{dest.description}</p>
-              </div>
-            </button>
+              id={dest.id}
+              label={dest.label}
+              description={dest.description}
+              available={available && leadsWithPhone > 0}
+              unavailableMsg={!available ? "Configure in Settings → Integrations" : "No phone numbers in leads"}
+            />
           );
         })}
       </div>
@@ -183,7 +227,7 @@ export function Step5Push({
         </Button>
       )}
 
-      {/* Push results */}
+      {/* Results */}
       {status === "done" && Object.keys(results).length > 0 && (
         <div className="space-y-3">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Results</p>
@@ -197,11 +241,7 @@ export function Step5Push({
                     : "bg-red-50 border-red-200 text-red-600"
                 }`}
               >
-                {r.success ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                ) : (
-                  <XCircle className="h-4 w-4 shrink-0" />
-                )}
+                {r.success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
                 <div>
                   <span className="font-medium capitalize">{dest}</span>
                   {" — "}
@@ -210,7 +250,6 @@ export function Step5Push({
               </div>
             ))}
           </div>
-
           <Button variant="gradient" className="w-full" onClick={() => onComplete(campaignRunId)}>
             Continue to Report →
           </Button>

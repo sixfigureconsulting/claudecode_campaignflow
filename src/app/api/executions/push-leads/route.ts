@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { decryptApiKey } from "@/lib/encryption";
+import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
 import { pushLeadsSchema } from "@/lib/validations";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Lead = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  company: string;
+  title: string;
+  linkedin_url?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  sequence?: {
+    linkedin_step1?: string;
+    linkedin_step2?: string;
+    email_subject1?: string;
+    email_body1?: string;
+    email_subject2?: string;
+    email_body2?: string;
+  };
+};
+
+type PushResult = { success: boolean; count: number; message: string; campaignId?: string };
+
+// ── Ownership check ───────────────────────────────────────────────────────────
 
 async function verifyOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -17,36 +42,13 @@ async function verifyOwnership(
   return !!data;
 }
 
-type Lead = {
-  first_name: string;
-  last_name: string;
-  email: string;
-  company: string;
-  title: string;
-  linkedin_url?: string | null;
-  website?: string | null;
-  sequence?: {
-    linkedin_step1?: string;
-    linkedin_step2?: string;
-    email_subject1?: string;
-    email_body1?: string;
-    email_subject2?: string;
-    email_body2?: string;
-  };
-};
+// ── Email platforms ───────────────────────────────────────────────────────────
 
-// Push leads to Instantly — creates a campaign or uses existing
-async function pushToInstantly(
-  leads: Lead[],
-  apiKey: string,
-  projectName: string
-): Promise<{ success: boolean; count: number; message: string; campaignId?: string }> {
+async function pushToInstantly(leads: Lead[], apiKey: string, projectName: string): Promise<PushResult> {
   try {
-    // 1. Find or create campaign
-    const listRes = await fetch(
-      "https://api.instantly.ai/api/v2/campaigns?limit=20",
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    );
+    const listRes = await fetch("https://api.instantly.ai/api/v2/campaigns?limit=20", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
     if (!listRes.ok) throw new Error(`Instantly list error ${listRes.status}`);
     const listData = await listRes.json();
 
@@ -60,45 +62,35 @@ async function pushToInstantly(
     } else {
       const createRes = await fetch("https://api.instantly.ai/api/v2/campaigns", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ name: `${projectName} — CampaignFlow` }),
       });
       if (!createRes.ok) throw new Error(`Instantly create campaign error ${createRes.status}`);
-      const created = await createRes.json();
-      campaignId = created.id as string;
+      campaignId = ((await createRes.json()) as any).id as string;
     }
 
     if (!campaignId) throw new Error("Could not get Instantly campaign ID");
 
-    // 2. Add leads
-    const leadsPayload = leads.map((l) => ({
-      email: l.email,
-      first_name: l.first_name,
-      last_name: l.last_name,
-      company_name: l.company,
-      custom_variables: {
-        title: l.title,
-        email_subject1: l.sequence?.email_subject1 ?? "",
-        email_body1: l.sequence?.email_body1 ?? "",
-        email_subject2: l.sequence?.email_subject2 ?? "",
-        email_body2: l.sequence?.email_body2 ?? "",
-      },
-    }));
-
-    const addRes = await fetch(
-      `https://api.instantly.ai/api/v2/leads`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ campaign_id: campaignId, leads: leadsPayload }),
-      }
-    );
+    const addRes = await fetch("https://api.instantly.ai/api/v2/leads", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        campaign_id: campaignId,
+        leads: leads.map((l) => ({
+          email: l.email,
+          first_name: l.first_name,
+          last_name: l.last_name,
+          company_name: l.company,
+          custom_variables: {
+            title: l.title,
+            email_subject1: l.sequence?.email_subject1 ?? "",
+            email_body1: l.sequence?.email_body1 ?? "",
+            email_subject2: l.sequence?.email_subject2 ?? "",
+            email_body2: l.sequence?.email_body2 ?? "",
+          },
+        })),
+      }),
+    });
     if (!addRes.ok) throw new Error(`Instantly add leads error ${addRes.status}`);
 
     return { success: true, count: leads.length, message: `${leads.length} leads added to Instantly`, campaignId: campaignId ?? undefined };
@@ -107,156 +99,405 @@ async function pushToInstantly(
   }
 }
 
-// Push leads to HubSpot as contacts
-async function pushToHubSpot(
-  leads: Lead[],
-  apiKey: string
-): Promise<{ success: boolean; count: number; message: string }> {
+async function pushToHubSpot(leads: Lead[], apiKey: string): Promise<PushResult> {
   try {
     let successCount = 0;
-    // HubSpot batch create/update contacts
-    const inputs = leads.map((l) => ({
-      properties: {
-        email: l.email,
-        firstname: l.first_name,
-        lastname: l.last_name,
-        company: l.company,
-        jobtitle: l.title,
-        website: l.website ?? "",
-        linkedinbio: l.linkedin_url ?? "",
-      },
-    }));
-
-    // Process in batches of 10
-    for (let i = 0; i < inputs.length; i += 10) {
-      const batch = inputs.slice(i, i + 10);
-      const res = await fetch(
-        "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputs: batch.map((b) => ({ ...b, idProperty: "email" })),
-          }),
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        successCount += (data.results ?? batch).length;
-      }
+    for (let i = 0; i < leads.length; i += 10) {
+      const batch = leads.slice(i, i + 10);
+      const res = await fetch("https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inputs: batch.map((l) => ({
+            idProperty: "email",
+            properties: {
+              email: l.email,
+              firstname: l.first_name,
+              lastname: l.last_name,
+              company: l.company,
+              jobtitle: l.title,
+              website: l.website ?? "",
+              linkedinbio: l.linkedin_url ?? "",
+            },
+          })),
+        }),
+      });
+      if (res.ok) successCount += ((await res.json()).results ?? batch).length;
     }
-
     return { success: true, count: successCount, message: `${successCount} contacts upserted in HubSpot` };
   } catch (err) {
     return { success: false, count: 0, message: String(err) };
   }
 }
 
+// ── Calling platforms ─────────────────────────────────────────────────────────
+
+function leadsWithPhone(leads: Lead[]): Lead[] {
+  return leads.filter((l) => l.phone && l.phone.trim());
+}
+
+// Bland AI — batch call endpoint
+async function pushToBland(
+  leads: Lead[],
+  cfg: Record<string, string>,
+  projectName: string
+): Promise<PushResult> {
+  try {
+    const callable = leadsWithPhone(leads);
+    if (callable.length === 0)
+      return { success: false, count: 0, message: "No leads have phone numbers. Bland AI requires phone numbers." };
+
+    const body: Record<string, unknown> = {
+      base_prompt: cfg.base_prompt || `You are a sales representative calling on behalf of ${projectName}. Introduce yourself professionally and ask if this is a good time to talk.`,
+      call_data: callable.map((l) => ({
+        phone_number: l.phone,
+        first_name: l.first_name,
+        last_name: l.last_name,
+        company: l.company,
+        title: l.title,
+      })),
+      label: `CampaignFlow — ${projectName}`,
+    };
+    if (cfg.from_number) body.from = cfg.from_number;
+    if (cfg.pathway_id) body.pathway_id = cfg.pathway_id;
+
+    const res = await fetch("https://api.bland.ai/v1/batches", {
+      method: "POST",
+      headers: { Authorization: cfg.api_key, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? err.error ?? `Bland API error ${res.status}`);
+    }
+    const data = await res.json();
+    return {
+      success: true,
+      count: callable.length,
+      message: `${callable.length} calls queued in Bland AI (batch: ${data.batch_id ?? "created"})`,
+    };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// VAPI — loop per lead (no batch endpoint)
+async function pushToVapi(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    const callable = leadsWithPhone(leads);
+    if (callable.length === 0)
+      return { success: false, count: 0, message: "No leads have phone numbers. VAPI requires phone numbers." };
+    if (!cfg.phone_number_id || !cfg.assistant_id)
+      return { success: false, count: 0, message: "VAPI config incomplete — phone_number_id and assistant_id are required." };
+
+    let successCount = 0;
+    // Process in batches of 5 to avoid rate limits
+    for (let i = 0; i < callable.length; i += 5) {
+      await Promise.all(
+        callable.slice(i, i + 5).map(async (l) => {
+          const res = await fetch("https://api.vapi.ai/call/phone", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${cfg.api_key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phoneNumberId: cfg.phone_number_id,
+              assistantId: cfg.assistant_id,
+              customer: { number: l.phone },
+              assistantOverrides: {
+                variableValues: {
+                  first_name: l.first_name,
+                  last_name: l.last_name,
+                  company: l.company,
+                  title: l.title,
+                },
+              },
+            }),
+          });
+          if (res.ok) successCount++;
+        })
+      );
+    }
+    return { success: true, count: successCount, message: `${successCount} calls dispatched via VAPI` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// Retell AI — loop per lead
+async function pushToRetell(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    const callable = leadsWithPhone(leads);
+    if (callable.length === 0)
+      return { success: false, count: 0, message: "No leads have phone numbers. Retell AI requires phone numbers." };
+    if (!cfg.agent_id || !cfg.from_number)
+      return { success: false, count: 0, message: "Retell config incomplete — agent_id and from_number are required." };
+
+    let successCount = 0;
+    for (let i = 0; i < callable.length; i += 5) {
+      await Promise.all(
+        callable.slice(i, i + 5).map(async (l) => {
+          const res = await fetch("https://api.retellai.com/v2/create-phone-call", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${cfg.api_key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agent_id: cfg.agent_id,
+              from_number: cfg.from_number,
+              to_number: l.phone,
+              retell_llm_dynamic_variables: {
+                first_name: l.first_name,
+                last_name: l.last_name,
+                company: l.company,
+                title: l.title,
+              },
+            }),
+          });
+          if (res.ok) successCount++;
+        })
+      );
+    }
+    return { success: true, count: successCount, message: `${successCount} calls dispatched via Retell AI` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// Synthflow AI — loop per lead
+async function pushToSynthflow(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    const callable = leadsWithPhone(leads);
+    if (callable.length === 0)
+      return { success: false, count: 0, message: "No leads have phone numbers. Synthflow requires phone numbers." };
+    if (!cfg.agent_id)
+      return { success: false, count: 0, message: "Synthflow config incomplete — agent_id (model_id) is required." };
+
+    let successCount = 0;
+    for (let i = 0; i < callable.length; i += 5) {
+      await Promise.all(
+        callable.slice(i, i + 5).map(async (l) => {
+          const res = await fetch("https://api.synthflow.ai/v2/calls", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${cfg.api_key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model_id: cfg.agent_id,
+              phone: l.phone,
+              name: `${l.first_name} ${l.last_name}`.trim(),
+              custom_variables: {
+                company: l.company,
+                title: l.title,
+                email: l.email,
+              },
+            }),
+          });
+          if (res.ok) successCount++;
+        })
+      );
+    }
+    return { success: true, count: successCount, message: `${successCount} calls dispatched via Synthflow` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// Air AI — loop per lead
+async function pushToAir(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    const callable = leadsWithPhone(leads);
+    if (callable.length === 0)
+      return { success: false, count: 0, message: "No leads have phone numbers. Air AI requires phone numbers." };
+    if (!cfg.agent_id)
+      return { success: false, count: 0, message: "Air AI config incomplete — agent_id is required." };
+
+    let successCount = 0;
+    for (let i = 0; i < callable.length; i += 5) {
+      await Promise.all(
+        callable.slice(i, i + 5).map(async (l) => {
+          const res = await fetch("https://api.air.ai/v1/calls", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${cfg.api_key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agent_id: cfg.agent_id,
+              to: l.phone,
+              variables: {
+                first_name: l.first_name,
+                last_name: l.last_name,
+                company: l.company,
+                title: l.title,
+              },
+            }),
+          });
+          if (res.ok) successCount++;
+        })
+      );
+    }
+    return { success: true, count: successCount, message: `${successCount} calls dispatched via Air AI` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// Twilio — loop per lead using basic auth + form-encoded body
+async function pushToTwilio(leads: Lead[], cfg: Record<string, string>): Promise<PushResult> {
+  try {
+    const callable = leadsWithPhone(leads);
+    if (callable.length === 0)
+      return { success: false, count: 0, message: "No leads have phone numbers. Twilio requires phone numbers." };
+    if (!cfg.account_sid || !cfg.auth_token || !cfg.from_number || !cfg.twiml_url)
+      return {
+        success: false, count: 0,
+        message: "Twilio config incomplete — account_sid, auth_token, from_number, and twiml_url are required.",
+      };
+
+    const authHeader = `Basic ${Buffer.from(`${cfg.account_sid}:${cfg.auth_token}`).toString("base64")}`;
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${cfg.account_sid}/Calls.json`;
+
+    let successCount = 0;
+    for (let i = 0; i < callable.length; i += 5) {
+      await Promise.all(
+        callable.slice(i, i + 5).map(async (l) => {
+          const body = new URLSearchParams({
+            To: l.phone!,
+            From: cfg.from_number,
+            Url: cfg.twiml_url,
+          });
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { Authorization: authHeader, "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString(),
+          });
+          if (res.ok) successCount++;
+        })
+      );
+    }
+    return { success: true, count: successCount, message: `${successCount} calls dispatched via Twilio` };
+  } catch (err) {
+    return { success: false, count: 0, message: String(err) };
+  }
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────────
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user)
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
     const parsed = pushLeadsSchema.safeParse(body);
     if (!parsed.success)
-      return NextResponse.json(
-        { error: "Invalid request", details: parsed.error.flatten() },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
 
     const { projectId, leads, destinations } = parsed.data;
 
     const owned = await verifyOwnership(supabase, projectId, user.id);
-    if (!owned)
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Get project name for campaign naming
-    const { data: project } = await supabase
-      .from("projects")
-      .select("name")
-      .eq("id", projectId)
-      .single();
+    const { data: project } = await supabase.from("projects").select("name").eq("id", projectId).single();
     const projectName = project?.name ?? "CampaignFlow";
 
-    // Fetch relevant keys
-    const { data: configs } = await supabase
-      .from("integration_configs")
-      .select("service, api_key_encrypted")
-      .eq("project_id", projectId)
-      .in("service", ["instantly", "hubspot"]);
+    // Helper to get config for any service from global integrations
+    const getConfig = (service: string) => getGlobalApiConfig(supabase, user.id, service);
 
-    const getKey = (service: string) => {
-      const row = (configs ?? []).find((c) => c.service === service);
-      return row ? decryptApiKey(row.api_key_encrypted) : null;
-    };
-
-    const results: Record<string, { success: boolean; count: number; message: string }> = {};
-
-    // Run all requested destinations in parallel
+    const results: Record<string, PushResult> = {};
     const tasks: Promise<void>[] = [];
 
+    // ── Email / CRM destinations ──────────────────────────────────────────────
+
     if (destinations.includes("instantly")) {
-      const key = getKey("instantly");
-      if (!key) {
-        results.instantly = { success: false, count: 0, message: "Instantly key not configured" };
-      } else {
-        tasks.push(
-          pushToInstantly(leads as Lead[], key, projectName).then((r) => {
-            results.instantly = r;
-          })
-        );
-      }
+      tasks.push((async () => {
+        const cfg = await getConfig("instantly");
+        const key = getApiKey(cfg);
+        results.instantly = key
+          ? await pushToInstantly(leads as Lead[], key, projectName)
+          : { success: false, count: 0, message: "Instantly key not configured" };
+      })());
     }
 
     if (destinations.includes("hubspot")) {
-      const key = getKey("hubspot");
-      if (!key) {
-        results.hubspot = { success: false, count: 0, message: "HubSpot key not configured" };
-      } else {
-        tasks.push(
-          pushToHubSpot(leads as Lead[], key).then((r) => {
-            results.hubspot = r;
-          })
-        );
-      }
+      tasks.push((async () => {
+        const cfg = await getConfig("hubspot");
+        const key = getApiKey(cfg);
+        results.hubspot = key
+          ? await pushToHubSpot(leads as Lead[], key)
+          : { success: false, count: 0, message: "HubSpot key not configured" };
+      })());
     }
 
     if (destinations.includes("csv")) {
-      // CSV is handled client-side; just acknowledge
       results.csv = { success: true, count: leads.length, message: `${leads.length} leads ready to download` };
+    }
+
+    // ── Calling platforms ─────────────────────────────────────────────────────
+
+    if (destinations.includes("bland")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("bland");
+        results.bland = cfg && typeof cfg === "object"
+          ? await pushToBland(leads as Lead[], cfg, projectName)
+          : { success: false, count: 0, message: "Bland AI not configured" };
+      })());
+    }
+
+    if (destinations.includes("vapi")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("vapi");
+        results.vapi = cfg && typeof cfg === "object"
+          ? await pushToVapi(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "VAPI not configured" };
+      })());
+    }
+
+    if (destinations.includes("retell")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("retell");
+        results.retell = cfg && typeof cfg === "object"
+          ? await pushToRetell(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "Retell AI not configured" };
+      })());
+    }
+
+    if (destinations.includes("synthflow")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("synthflow");
+        results.synthflow = cfg && typeof cfg === "object"
+          ? await pushToSynthflow(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "Synthflow not configured" };
+      })());
+    }
+
+    if (destinations.includes("air")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("air");
+        results.air = cfg && typeof cfg === "object"
+          ? await pushToAir(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "Air AI not configured" };
+      })());
+    }
+
+    if (destinations.includes("twilio")) {
+      tasks.push((async () => {
+        const cfg = await getConfig("twilio");
+        results.twilio = cfg && typeof cfg === "object"
+          ? await pushToTwilio(leads as Lead[], cfg)
+          : { success: false, count: 0, message: "Twilio not configured" };
+      })());
     }
 
     await Promise.all(tasks);
 
-    // Log execution
     const successDestinations = Object.entries(results)
-      .filter(([, v]) => v.success)
-      .map(([k]) => k)
-      .join(", ");
+      .filter(([, v]) => v.success).map(([k]) => k).join(", ");
 
     await supabase.from("executions").insert({
       project_id: projectId,
       action_type: "campaign_workflow",
       status: "completed",
       inputs_summary: `Push ${leads.length} leads to: ${destinations.join(", ")}`,
-      outputs_summary: successDestinations
-        ? `Pushed to ${successDestinations}`
-        : "Push failed",
+      outputs_summary: successDestinations ? `Pushed to ${successDestinations}` : "Push failed",
       completed_at: new Date().toISOString(),
     });
 
-    // Create a campaign_run record to enable weekly reporting
-    // Capture the Instantly campaign ID from the push result if available
-    const instantlyResult = results.instantly as (typeof results.instantly & { campaignId?: string }) | undefined;
+    const instantlyResult = results.instantly as (PushResult & { campaignId?: string }) | undefined;
     const { data: campaignRun } = await supabase
       .from("campaign_runs")
       .insert({

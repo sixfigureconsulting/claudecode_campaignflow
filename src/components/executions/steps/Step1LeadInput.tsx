@@ -17,10 +17,11 @@ type SourceConfig = {
   logo: string;          // clearbit logo domain or direct URL
   color: string;         // tailwind bg + border class
   modes: string[];       // which campaign types this appears in
-  inputType: "apollo_url" | "apify_url" | "csv" | "webhook" | "clay" | "crm_url" | "gsheet_url" | "coming_soon";
+  inputType: "apollo_url" | "apify_url" | "csv" | "webhook" | "hunter_domain" | "hubspot_list" | "gsheet_url" | "calling_api" | "coming_soon";
   settingsService?: string;
   ctaLabel: string;
   placeholder?: string;
+  callingPlatform?: true; // visual grouping
 };
 
 const SOURCES: SourceConfig[] = [
@@ -62,12 +63,14 @@ const SOURCES: SourceConfig[] = [
   {
     id: "hunter",
     label: "Hunter.io",
-    description: "Find verified emails from domain search. Export list as CSV and import here.",
+    description: "Find all verified emails at a company domain. Enter the domain and Hunter fetches contacts automatically.",
     logo: "hunter.io",
     color: "bg-red-50 border-red-200 hover:border-red-400",
     modes: ["cold_email", "multi_channel"],
-    inputType: "csv",
-    ctaLabel: "Upload Hunter CSV",
+    inputType: "hunter_domain",
+    settingsService: "hunter",
+    ctaLabel: "Fetch from Hunter.io",
+    placeholder: "acme.com",
   },
   {
     id: "lusha",
@@ -88,16 +91,6 @@ const SOURCES: SourceConfig[] = [
     modes: ["cold_email", "cold_call"],
     inputType: "csv",
     ctaLabel: "Upload Seamless CSV",
-  },
-  {
-    id: "clay",
-    label: "Clay",
-    description: "Import enriched lead tables exported from Clay as CSV.",
-    logo: "clay.com",
-    color: "bg-amber-50 border-amber-200 hover:border-amber-400",
-    modes: ["cold_email", "linkedin", "multi_channel", "cold_call", "custom"],
-    inputType: "csv",
-    ctaLabel: "Upload Clay CSV",
   },
   {
     id: "zoominfo",
@@ -122,14 +115,14 @@ const SOURCES: SourceConfig[] = [
   {
     id: "hubspot",
     label: "HubSpot CRM",
-    description: "Pull contacts or deals from HubSpot lists and segments.",
+    description: "Pull contacts from a HubSpot contact list by ID. Find list IDs in HubSpot → Contacts → Lists.",
     logo: "hubspot.com",
     color: "bg-orange-50 border-orange-200 hover:border-orange-400",
     modes: ["cold_email", "multi_channel", "custom"],
-    inputType: "crm_url",
+    inputType: "hubspot_list",
     settingsService: "hubspot",
     ctaLabel: "Import from HubSpot",
-    placeholder: "HubSpot list name or ID...",
+    placeholder: "e.g. 12345",
   },
   {
     id: "gsheet",
@@ -162,55 +155,165 @@ const SOURCES: SourceConfig[] = [
     inputType: "webhook",
     ctaLabel: "Configure Webhook",
   },
+
+  // ── Calling platforms (cold_call only) ────────────────────────────────────
+  {
+    id: "retell",
+    label: "Retell AI",
+    description: "AI-powered voice agents for outbound calls. Leads dialed automatically via Retell's API in Step 5.",
+    logo: "retellai.com",
+    color: "bg-violet-50 border-violet-200 hover:border-violet-400",
+    modes: ["cold_call"],
+    inputType: "calling_api",
+    settingsService: "retell",
+    ctaLabel: "Connect Retell AI",
+    callingPlatform: true,
+  },
+  {
+    id: "vapi",
+    label: "VAPI",
+    description: "Build and deploy voice AI agents. CampaignFlow pushes leads to VAPI to trigger outbound call batches.",
+    logo: "vapi.ai",
+    color: "bg-blue-50 border-blue-200 hover:border-blue-400",
+    modes: ["cold_call"],
+    inputType: "calling_api",
+    settingsService: "vapi",
+    ctaLabel: "Connect VAPI",
+    callingPlatform: true,
+  },
+  {
+    id: "bland",
+    label: "Bland AI",
+    description: "Scalable AI phone calls at any volume. Send your lead list to Bland AI to start automated call campaigns.",
+    logo: "bland.ai",
+    color: "bg-green-50 border-green-200 hover:border-green-400",
+    modes: ["cold_call"],
+    inputType: "calling_api",
+    settingsService: "bland",
+    ctaLabel: "Connect Bland AI",
+    callingPlatform: true,
+  },
+  {
+    id: "air",
+    label: "Air AI",
+    description: "Fully autonomous AI sales calls with human-like conversation. Integrates via REST API.",
+    logo: "air.ai",
+    color: "bg-sky-50 border-sky-200 hover:border-sky-400",
+    modes: ["cold_call"],
+    inputType: "calling_api",
+    settingsService: "air",
+    ctaLabel: "Connect Air AI",
+    callingPlatform: true,
+  },
+  {
+    id: "synthflow",
+    label: "Synthflow AI",
+    description: "No-code AI calling platform. Push leads to Synthflow workflows to trigger outbound follow-up calls.",
+    logo: "synthflow.ai",
+    color: "bg-teal-50 border-teal-200 hover:border-teal-400",
+    modes: ["cold_call"],
+    inputType: "calling_api",
+    settingsService: "synthflow",
+    ctaLabel: "Connect Synthflow",
+    callingPlatform: true,
+  },
+  {
+    id: "twilio",
+    label: "Twilio",
+    description: "Programmable voice calls via Twilio's API. Use with your own call scripts or IVR flows.",
+    logo: "twilio.com",
+    color: "bg-red-50 border-red-200 hover:border-red-400",
+    modes: ["cold_call"],
+    inputType: "calling_api",
+    settingsService: "twilio",
+    ctaLabel: "Connect Twilio",
+    callingPlatform: true,
+  },
 ];
 
 // Which sources appear per campaign type
 const TYPE_PRIORITY: Record<string, string[]> = {
-  cold_email:    ["apollo", "apify", "clay", "hunter", "lusha", "seamless", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
-  linkedin:      ["apollo", "apify", "sales_navigator", "clay", "gsheet", "csv", "webhook"],
-  multi_channel: ["apollo", "apify", "sales_navigator", "clay", "hunter", "lusha", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
-  cold_call:     ["apollo", "apify", "lusha", "seamless", "clay", "zoominfo", "gsheet", "csv", "webhook"],
-  custom:        ["apollo", "apify", "clay", "rb2b", "hubspot", "gsheet", "csv", "webhook"],
+  cold_email:    ["apollo", "apify", "hunter", "lusha", "seamless", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
+  linkedin:      ["apollo", "apify", "sales_navigator", "gsheet", "csv", "webhook"],
+  multi_channel: ["apollo", "apify", "sales_navigator", "hunter", "lusha", "zoominfo", "gsheet", "csv", "hubspot", "webhook"],
+  cold_call:     ["retell", "vapi", "bland", "air", "synthflow", "twilio", "apollo", "apify", "lusha", "seamless", "zoominfo", "gsheet", "csv", "webhook"],
+  custom:        ["apollo", "apify", "rb2b", "hubspot", "gsheet", "csv", "webhook"],
 };
 
 // ── CSV parsing ───────────────────────────────────────────────────────────────
 
 const COL_MAP: Record<string, keyof CampaignLead> = {
+  // Name
   first_name: "first_name", firstname: "first_name", "first name": "first_name",
   last_name: "last_name", lastname: "last_name", "last name": "last_name",
-  email: "email", "email address": "email",
-  company: "company", organization: "company", "company name": "company", organization_name: "company",
-  title: "title", "job title": "title", jobtitle: "title", position: "title",
-  linkedin_url: "linkedin_url", linkedin: "linkedin_url", "linkedin url": "linkedin_url", "linkedin profile url": "linkedin_url",
+  name: "first_name", "full name": "first_name", "contact name": "first_name",
+  // Email
+  email: "email", "email address": "email", "work email": "email",
+  // Company
+  company: "company", organization: "company", "company name": "company",
+  organization_name: "company", "account name": "company",
+  // Title
+  title: "title", "job title": "title", jobtitle: "title",
+  position: "title", role: "title", "job role": "title",
+  // LinkedIn
+  linkedin_url: "linkedin_url", linkedin: "linkedin_url",
+  "linkedin url": "linkedin_url", "linkedin profile url": "linkedin_url",
+  "company linkedin url": "linkedin_url", "company linkedin": "linkedin_url",
+  // Website
   website: "website", "website url": "website", "company website": "website",
+  "website url": "website", url: "website",
+  // Phone
   phone: "phone", "phone number": "phone", mobile: "phone",
+  "company phone": "phone", "direct phone": "phone", telephone: "phone",
+  "phone 1": "phone", "mobile phone": "phone",
 };
 
 function parseCSV(text: string): CampaignLead[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
   const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
+
   return lines.slice(1).map((line) => {
+    // Handle quoted fields correctly
     const values: string[] = [];
     let current = ""; let inQuotes = false;
     for (const char of line) {
       if (char === '"') { inQuotes = !inQuotes; }
-      else if (char === "," && !inQuotes) { values.push(current.trim()); current = ""; }
+      else if (char === "," && !inQuotes) { values.push(current.trim().replace(/^"|"$/g, "")); current = ""; }
       else { current += char; }
     }
-    values.push(current.trim());
+    values.push(current.trim().replace(/^"|"$/g, ""));
+
     const lead: Partial<CampaignLead> = {};
     headers.forEach((header, i) => {
       const key = COL_MAP[header];
-      if (key) (lead as Record<string, string>)[key] = values[i] ?? "";
+      if (key && values[i]) (lead as Record<string, string>)[key] = values[i];
     });
+
+    // If "name" column was mapped to first_name, try to split "First Last"
+    if (lead.first_name && !lead.last_name && lead.first_name.includes(" ")) {
+      const parts = lead.first_name.trim().split(/\s+/);
+      lead.first_name = parts[0];
+      lead.last_name = parts.slice(1).join(" ");
+    }
+
     return {
-      first_name: lead.first_name ?? "", last_name: lead.last_name ?? "",
-      email: lead.email ?? "", company: lead.company ?? "",
-      title: lead.title ?? "", linkedin_url: lead.linkedin_url ?? null,
-      website: lead.website ?? null, phone: lead.phone ?? null,
+      first_name: lead.first_name ?? "",
+      last_name: lead.last_name ?? "",
+      email: lead.email ?? "",
+      company: lead.company ?? "",
+      title: lead.title ?? "",
+      linkedin_url: lead.linkedin_url ?? null,
+      website: lead.website ?? null,
+      phone: lead.phone ?? null,
     } as CampaignLead;
-  }).filter((l) => l.email && l.email.includes("@"));
+  }).filter((l) => {
+    // Accept leads with a valid email OR a phone number (cold calling)
+    const hasEmail = l.email && l.email.includes("@");
+    const hasPhone = l.phone && l.phone.trim().length > 5;
+    const hasIdentifier = l.company || l.first_name;
+    return (hasEmail || hasPhone) && hasIdentifier;
+  });
 }
 
 function extractApolloListId(url: string): string | null {
@@ -323,6 +426,7 @@ export function Step1LeadInput({
   hasApolloKey,
   hasApifyKey,
   hasHubSpotKey,
+  hasHunterKey,
   campaignType,
   onComplete,
 }: {
@@ -330,6 +434,7 @@ export function Step1LeadInput({
   hasApolloKey: boolean;
   hasApifyKey?: boolean;
   hasHubSpotKey?: boolean;
+  hasHunterKey?: boolean;
   campaignType?: string;
   onComplete: (leads: CampaignLead[]) => void;
 }) {
@@ -354,7 +459,8 @@ export function Step1LeadInput({
     if (s.settingsService === "apollo") return hasApolloKey;
     if (s.settingsService === "apify") return !!hasApifyKey;
     if (s.settingsService === "hubspot") return !!hasHubSpotKey;
-    return false; // CSV sources don't need a key
+    if (s.settingsService === "hunter") return !!hasHunterKey;
+    return false; // CSV/gsheet/webhook sources don't need a key
   };
 
   const needsKey = source?.settingsService && !isConnected(source);
@@ -400,25 +506,43 @@ export function Step1LeadInput({
       if (!file) return;
       const text = await file.text();
       const leads = parseCSV(text);
-      if (leads.length === 0) { setMessage("No valid leads found. Make sure the CSV has email addresses."); setStatus("error"); return; }
+      if (leads.length === 0) { setMessage("No valid leads found. Make sure the CSV has an email or phone column, plus a company or name column."); setStatus("error"); return; }
       setPreviewLeads(leads); setStatus("done");
       setMessage(`${leads.length} leads parsed from ${source.label}`);
 
+    } else if (source.inputType === "hunter_domain") {
+      const res = await fetch("/api/executions/fetch-hunter-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, domain: inputValue.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setMessage(json.error ?? "Failed to fetch leads."); setStatus("error"); return; }
+      setPreviewLeads(json.leads); setStatus("done");
+      setMessage(`${json.total} contacts found at ${inputValue.trim()}`);
+
+    } else if (source.inputType === "hubspot_list") {
+      const res = await fetch("/api/executions/fetch-hubspot-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, listId: inputValue.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setMessage(json.error ?? "Failed to fetch leads."); setStatus("error"); return; }
+      setPreviewLeads(json.leads); setStatus("done");
+      setMessage(`${json.total} contacts imported from HubSpot list`);
+
     } else if (source.inputType === "gsheet_url") {
-      // Convert share URL to CSV export URL
-      const match = inputValue.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-      if (!match) { setMessage("Invalid Google Sheets URL."); setStatus("error"); return; }
-      const sheetId = match[1];
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-      try {
-        const res = await fetch(csvUrl);
-        if (!res.ok) { setMessage("Could not fetch Google Sheet. Make sure it is publicly shared."); setStatus("error"); return; }
-        const text = await res.text();
-        const leads = parseCSV(text);
-        if (leads.length === 0) { setMessage("No valid leads found in the sheet."); setStatus("error"); return; }
-        setPreviewLeads(leads); setStatus("done");
-        setMessage(`${leads.length} leads imported from Google Sheets`);
-      } catch { setMessage("Failed to fetch Google Sheet."); setStatus("error"); }
+      // Server-side fetch to bypass browser CORS restrictions on Google's export endpoint
+      const res = await fetch("/api/executions/fetch-gsheet-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sheetUrl: inputValue.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setMessage(json.error ?? "Failed to fetch Google Sheet."); setStatus("error"); return; }
+      setPreviewLeads(json.leads); setStatus("done");
+      setMessage(`${json.total} leads imported from Google Sheets`);
 
     } else {
       // coming_soon / webhook / crm — show placeholder
@@ -438,19 +562,54 @@ export function Step1LeadInput({
             <p className="text-sm text-muted-foreground">
               Choose where your leads are coming from:
             </p>
-            <Badge variant="outline" className="text-xs capitalize">{type.replace("_", " ")}</Badge>
+            <Badge variant="outline" className="text-xs capitalize">{type.replace(/_/g, " ")}</Badge>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {availableSources.map((s) => (
-              <SourceCard
-                key={s.id}
-                source={s}
-                isConnected={isConnected(s)}
-                selected={false}
-                onClick={() => { setSelectedSource(s.id); reset(); }}
-              />
-            ))}
-          </div>
+          {(() => {
+            const callingPlatforms = availableSources.filter((s) => s.callingPlatform);
+            const leadSources = availableSources.filter((s) => !s.callingPlatform);
+            return (
+              <div className="space-y-5">
+                {callingPlatforms.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Calling Platforms
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {callingPlatforms.map((s) => (
+                        <SourceCard
+                          key={s.id}
+                          source={s}
+                          isConnected={isConnected(s)}
+                          selected={false}
+                          onClick={() => { setSelectedSource(s.id); reset(); }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {leadSources.length > 0 && (
+                  <div className="space-y-2">
+                    {callingPlatforms.length > 0 && (
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Lead Sources
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {leadSources.map((s) => (
+                        <SourceCard
+                          key={s.id}
+                          source={s}
+                          isConnected={isConnected(s)}
+                          selected={false}
+                          onClick={() => { setSelectedSource(s.id); reset(); }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -490,7 +649,8 @@ export function Step1LeadInput({
 
           {/* URL / text input */}
           {(source.inputType === "apollo_url" || source.inputType === "apify_url" ||
-            source.inputType === "gsheet_url" || source.inputType === "crm_url") && (
+            source.inputType === "gsheet_url" || source.inputType === "hunter_domain" ||
+            source.inputType === "hubspot_list") && (
             <div className="space-y-2">
               <Input
                 placeholder={source.placeholder}
@@ -507,6 +667,12 @@ export function Step1LeadInput({
               )}
               {source.inputType === "gsheet_url" && (
                 <p className="text-xs text-muted-foreground">The sheet must be publicly shared (Anyone with link can view).</p>
+              )}
+              {source.inputType === "hunter_domain" && (
+                <p className="text-xs text-muted-foreground">Enter the company domain (e.g. <code className="bg-muted px-1 rounded">stripe.com</code>). Hunter will return all verified emails at that domain.</p>
+              )}
+              {source.inputType === "hubspot_list" && (
+                <p className="text-xs text-muted-foreground">Find your list ID in HubSpot → Contacts → Lists. The numeric ID is shown in the URL.</p>
               )}
             </div>
           )}
@@ -542,6 +708,47 @@ export function Step1LeadInput({
             </div>
           )}
 
+          {/* Calling platform info */}
+          {source.inputType === "calling_api" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl text-sm space-y-2">
+                <p className="font-semibold text-violet-900 flex items-center gap-2">
+                  <span className="text-base">📞</span> How it works
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-violet-800 text-xs leading-relaxed">
+                  <li>Import your leads from any source below (Apollo, CSV, etc.)</li>
+                  <li>Qualify and filter them through Steps 2–4</li>
+                  <li>In Step 5 (Push), CampaignFlow sends the list to <strong>{source.label}</strong> via API to trigger outbound calls</li>
+                </ol>
+              </div>
+              {needsKey ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  Add your {source.label} API key in{" "}
+                  <a href="/settings" className="underline font-medium inline-flex items-center gap-0.5">
+                    Settings → Integrations <ExternalLink className="h-3 w-3" />
+                  </a>{" "}
+                  to enable calling in Step 5.
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-700">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  {source.label} is connected. Your leads will be sent for outbound calls in Step 5.
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Now import your leads using Apollo, CSV, or any other source. Once you reach Step 5, CampaignFlow will dispatch the calls via {source.label}.
+              </p>
+              <Button
+                variant="gradient"
+                className="w-full"
+                onClick={() => { setSelectedSource(null); reset(); }}
+              >
+                Select lead source →
+              </Button>
+            </div>
+          )}
+
           {/* Webhook info */}
           {source.inputType === "webhook" && (
             <div className="p-4 bg-muted/40 rounded-xl border border-border text-sm space-y-2">
@@ -571,7 +778,7 @@ export function Step1LeadInput({
           )}
 
           {/* CTA */}
-          {source.inputType !== "webhook" && previewLeads.length === 0 && (
+          {source.inputType !== "webhook" && source.inputType !== "calling_api" && previewLeads.length === 0 && (
             <Button
               variant="gradient"
               className="w-full"
@@ -585,6 +792,12 @@ export function Step1LeadInput({
             >
               {source.ctaLabel}
             </Button>
+          )}
+          {/* Status messages for non-URL input types that fall through to coming_soon */}
+          {source.inputType === "coming_soon" && (
+            <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs text-muted-foreground">
+              Direct API import coming soon. Export from {source.label} as CSV and use the CSV Upload source.
+            </div>
           )}
 
           {/* Lead preview */}

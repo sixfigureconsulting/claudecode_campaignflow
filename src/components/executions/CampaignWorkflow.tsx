@@ -28,7 +28,9 @@ export function CampaignWorkflow({
   hasHeyreachKey,
   hasInstantlyKey,
   hasHubSpotKey,
+  hasHunterKey,
   hasSlackKey,
+  connectedCallingServices,
 }: {
   projectId: string;
   campaignType?: string;
@@ -38,7 +40,9 @@ export function CampaignWorkflow({
   hasHeyreachKey: boolean;
   hasInstantlyKey: boolean;
   hasHubSpotKey: boolean;
+  hasHunterKey?: boolean;
   hasSlackKey: boolean;
+  connectedCallingServices?: string[];
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [leads, setLeads] = useState<CampaignLead[]>([]);
@@ -133,6 +137,7 @@ export function CampaignWorkflow({
             hasApolloKey={hasApolloKey}
             hasApifyKey={hasApifyKey}
             hasHubSpotKey={hasHubSpotKey}
+            hasHunterKey={hasHunterKey}
             onComplete={handleStep1Complete}
           />
         )}
@@ -168,6 +173,7 @@ export function CampaignWorkflow({
             leads={leads}
             hasInstantlyKey={hasInstantlyKey}
             hasHubSpotKey={hasHubSpotKey}
+            connectedCallingServices={connectedCallingServices}
             onComplete={handleStep5Complete}
           />
         )}

@@ -55,7 +55,7 @@ export function LandingPricing() {
           <div className="bg-white rounded-2xl border-2 border-brand-400 p-6">
             <p className="font-semibold text-gray-900 mb-1">Monthly</p>
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-4xl font-bold">$19</span>
+              <span className="text-4xl font-bold">$97</span>
               <span className="text-gray-500 text-sm">/ month</span>
             </div>
             <ul className="space-y-2 mb-6 text-sm">
@@ -76,15 +76,15 @@ export function LandingPricing() {
             <div className="absolute -top-3 right-4">
               <span className="bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
                 <Zap className="h-3 w-3" />
-                Save $131
+                Save $667
               </span>
             </div>
             <p className="font-semibold text-white mb-1">Yearly</p>
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-4xl font-bold text-white">$97</span>
+              <span className="text-4xl font-bold text-white">$497</span>
               <span className="text-brand-300 text-sm">/ year</span>
             </div>
-            <p className="text-brand-400 text-xs mb-4">$8.08/month, billed annually</p>
+            <p className="text-brand-400 text-xs mb-4">$41.42/month, billed annually</p>
             <ul className="space-y-2 mb-6 text-sm">
               {FEATURES.map((f) => (
                 <li key={f} className="flex items-center gap-2 text-brand-200">

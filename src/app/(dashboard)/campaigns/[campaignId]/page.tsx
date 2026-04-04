@@ -58,6 +58,10 @@ export default async function CampaignPage({
     .then((r) => ({ data: r.data ?? [] }));
 
   const hasKey = (s: string) => integrationConfigs.some((c) => c.service === s);
+
+  const CALLING_PLATFORM_IDS = ["retell", "vapi", "bland", "synthflow", "air", "twilio"];
+  const connectedCallingServices = CALLING_PLATFORM_IDS.filter(hasKey);
+
   const subtype = getCampaignSubtype(campaign);
 
   const typeLabel = CAMPAIGN_TYPE_LABELS[subtype] ?? subtype;
@@ -106,7 +110,9 @@ export default async function CampaignPage({
           hasHeyreachKey={hasKey("heyreach")}
           hasInstantlyKey={hasKey("instantly")}
           hasHubSpotKey={hasKey("hubspot")}
+          hasHunterKey={hasKey("hunter")}
           hasSlackKey={hasKey("slack")}
+          connectedCallingServices={connectedCallingServices}
         />
       </div>
 

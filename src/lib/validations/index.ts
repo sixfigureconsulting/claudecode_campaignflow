@@ -116,11 +116,18 @@ export type AIRecommendationRequest = z.infer<typeof aiRecommendationRequestSche
 
 // ── Integration Config ────────────────────────────────────────────────────────
 
-export const INTEGRATION_SERVICES = ["apollo", "apify", "heyreach", "instantly", "smartlead", "openai", "hubspot", "slack"] as const;
+export const INTEGRATION_SERVICES = [
+  "apollo", "apify", "heyreach", "instantly", "smartlead", "openai", "hubspot", "slack",
+  // Lead enrichment
+  "hunter", "lusha",
+  // Calling platforms
+  "retell", "vapi", "bland", "synthflow", "air", "twilio",
+] as const;
 
 export const integrationConfigSchema = z.object({
   service: z.enum(INTEGRATION_SERVICES),
-  api_key: z.string().min(10, "API key appears too short").max(2000, "API key appears too long"),
+  // Allow longer values — calling platforms store JSON with multiple fields
+  api_key: z.string().min(1, "Value is required").max(5000, "Value too long"),
 });
 
 export type IntegrationConfigFormData = z.infer<typeof integrationConfigSchema>;
@@ -157,6 +164,21 @@ export const fetchApolloLeadsSchema = z.object({
   apolloListId: z.string().optional(),
 });
 
+export const fetchHunterLeadsSchema = z.object({
+  projectId: z.string().uuid(),
+  domain: z.string().min(1, "Domain is required"),
+});
+
+export const fetchHubSpotLeadsSchema = z.object({
+  projectId: z.string().uuid(),
+  listId: z.string().min(1, "HubSpot list ID is required"),
+});
+
+export const fetchLushaLeadsSchema = z.object({
+  projectId: z.string().uuid(),
+  domain: z.string().min(1, "Domain is required"),
+});
+
 export const qualifyLeadsSchema = z.object({
   projectId: z.string().uuid(),
   leads: z.array(leadShape),
@@ -175,10 +197,16 @@ export const generateSequencesSchema = z.object({
   offerContext: z.string().optional().default(""),
 });
 
+const PUSH_DESTINATIONS = [
+  "instantly", "hubspot", "csv",
+  // Calling platforms
+  "retell", "vapi", "bland", "synthflow", "air", "twilio",
+] as const;
+
 export const pushLeadsSchema = z.object({
   projectId: z.string().uuid(),
   leads: z.array(z.any()),
-  destinations: z.array(z.enum(["instantly", "hubspot", "csv"])).min(1),
+  destinations: z.array(z.enum(PUSH_DESTINATIONS)).min(1),
 });
 
 export type FetchApolloLeadsRequest = z.infer<typeof fetchApolloLeadsSchema>;
