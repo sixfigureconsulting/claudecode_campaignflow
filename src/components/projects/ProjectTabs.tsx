@@ -6,20 +6,13 @@ import { ReportsList } from "@/components/reports/ReportsList";
 import { MetricsCharts } from "@/components/charts/MetricsCharts";
 import { CampaignWorkflow } from "@/components/executions/CampaignWorkflow";
 import { ExecutionHistory } from "@/components/executions/ExecutionHistory";
-import { IntegrationConfigForm } from "@/components/integrations/IntegrationConfigForm";
 import type { Execution } from "@/types/database";
-
-type ServiceConfig = {
-  service: string;
-  masked_key: string;
-  updated_at: string;
-};
 
 type ProjectTabsProps = {
   projectId: string;
   clientId: string;
   reports: any[];
-  integrationConfigs: ServiceConfig[];
+  integrationConfigs: { service: string }[];
   executions: Execution[];
   hasAnthropicKey: boolean;
 };
@@ -34,9 +27,9 @@ export function ProjectTabs({
   const hasKey = (service: string) => integrationConfigs.some((c) => c.service === service);
 
   return (
-    <Tabs defaultValue="integrations" className="space-y-6">
+    <Tabs defaultValue="actions" className="space-y-6">
       <TabsList className="flex gap-1 border-b border-border w-full pb-0">
-        {["integrations", "actions", "reports"].map((tab) => (
+        {["actions", "reports"].map((tab) => (
           <TabsTrigger
             key={tab}
             value={tab}
@@ -46,17 +39,6 @@ export function ProjectTabs({
           </TabsTrigger>
         ))}
       </TabsList>
-
-      {/* ── Integrations tab ── */}
-      <TabsContent value="integrations" className="mt-0">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Integrations</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Connect your tools. Keys are encrypted and stored per project.
-          </p>
-        </div>
-        <IntegrationConfigForm projectId={projectId} existingConfigs={integrationConfigs} />
-      </TabsContent>
 
       {/* ── Actions tab ── */}
       <TabsContent value="actions" className="space-y-6 mt-0">

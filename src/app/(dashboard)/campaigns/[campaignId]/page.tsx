@@ -28,11 +28,34 @@ export default async function CampaignPage({
 
   if (!campaign) notFound();
 
-  const { data: integrationConfigs } = await supabase
-    .from("integration_configs")
-    .select("service, masked_key:api_key_encrypted, updated_at")
-    .eq("project_id", campaignId)
-    .then((r) => ({ data: r.data ?? [] }));
+  // Fetch global integration configs (stored under __integrations__ project)
+  // Used by CampaignWorkflow to know which services are connected
+  let integrationConfigs: { service: string }[] = [];
+  try {
+    const { data: defaultClient } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", "__default__")
+      .single();
+
+    if (defaultClient) {
+      const { data: intProject } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("client_id", defaultClient.id)
+        .eq("name", "__integrations__")
+        .single();
+
+      if (intProject) {
+        const { data: configs } = await supabase
+          .from("integration_configs")
+          .select("service")
+          .eq("project_id", intProject.id);
+        integrationConfigs = configs ?? [];
+      }
+    }
+  } catch {}
 
   const { data: executions } = await supabase
     .from("executions")
@@ -41,18 +64,6 @@ export default async function CampaignPage({
     .order("created_at", { ascending: false })
     .limit(20)
     .then((r) => ({ data: r.data ?? [] }));
-
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("status, trial_ends_at")
-    .eq("user_id", user.id)
-    .single();
-
-  const isSubscribed =
-    subscription?.status === "active" ||
-    (subscription?.status === "trialing" &&
-      subscription.trial_ends_at &&
-      new Date(subscription.trial_ends_at) > new Date());
 
   const subtype = getCampaignSubtype(campaign);
   const typeLabel = CAMPAIGN_TYPE_LABELS[subtype] ?? subtype;
@@ -80,12 +91,12 @@ export default async function CampaignPage({
         </div>
       </div>
 
-      {/* Tabs: Integrations | Actions | Reports */}
+      {/* Tabs: Actions | Reports */}
       <ProjectTabs
         projectId={campaign.id}
         clientId=""
         reports={campaign.reports ?? []}
-        integrationConfigs={integrationConfigs ?? []}
+        integrationConfigs={integrationConfigs}
         executions={executions ?? []}
         hasAnthropicKey={false}
       />
