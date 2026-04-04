@@ -53,6 +53,27 @@ export default async function DashboardPage() {
     (c: any) => c.name !== "__integrations__" && c.name !== "__default__"
   );
 
+  // Check which email sync tools are connected
+  let hasInstantly = false;
+  let hasSmartlead = false;
+  try {
+    const { data: defaultClient } = await supabase
+      .from("clients").select("id")
+      .eq("user_id", user.id).eq("name", "__default__").single();
+    if (defaultClient) {
+      const { data: intProject } = await supabase
+        .from("projects").select("id")
+        .eq("client_id", defaultClient.id).eq("name", "__integrations__").single();
+      if (intProject) {
+        const { data: configs } = await supabase
+          .from("integration_configs").select("service")
+          .eq("project_id", intProject.id);
+        hasInstantly = (configs ?? []).some((c: any) => c.service === "instantly");
+        hasSmartlead = (configs ?? []).some((c: any) => c.service === "smartlead");
+      }
+    }
+  } catch {}
+
   // ── Aggregate stats ──────────────────────────────────────────────────────────
   let totalSent = 0, totalOpens = 0, totalReplies = 0, totalMeetings = 0, totalRevenue = 0;
   let totalReports = 0;
@@ -160,7 +181,12 @@ export default async function DashboardPage() {
       <CampaignAnalyticsTable campaigns={campaignRows} />
 
       {/* Reports — inline per campaign */}
-      <DashboardReports campaigns={allCampaigns} isSubscribed={!!isSubscribed} />
+      <DashboardReports
+        campaigns={allCampaigns}
+        isSubscribed={!!isSubscribed}
+        hasInstantly={hasInstantly}
+        hasSmartlead={hasSmartlead}
+      />
     </div>
   );
 }

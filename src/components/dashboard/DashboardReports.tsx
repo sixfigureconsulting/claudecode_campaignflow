@@ -11,14 +11,20 @@ import { cn } from "@/lib/utils";
 interface DashboardReportsProps {
   campaigns: any[];
   isSubscribed: boolean;
+  hasInstantly?: boolean;
+  hasSmartlead?: boolean;
 }
 
 function CampaignReportSection({
   campaign,
   isSubscribed,
+  hasInstantly,
+  hasSmartlead,
 }: {
   campaign: any;
   isSubscribed: boolean;
+  hasInstantly?: boolean;
+  hasSmartlead?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const config = CAMPAIGN_TYPE_CONFIG[getCampaignSubtype(campaign)] ?? CAMPAIGN_TYPE_CONFIG.custom;
@@ -62,6 +68,8 @@ function CampaignReportSection({
             projectId={campaign.id}
             reports={campaign.reports ?? []}
             isSubscribed={isSubscribed}
+            hasInstantly={hasInstantly}
+            hasSmartlead={hasSmartlead}
           />
         </div>
       )}
@@ -69,7 +77,7 @@ function CampaignReportSection({
   );
 }
 
-export function DashboardReports({ campaigns, isSubscribed }: DashboardReportsProps) {
+export function DashboardReports({ campaigns, isSubscribed, hasInstantly, hasSmartlead }: DashboardReportsProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -106,6 +114,8 @@ export function DashboardReports({ campaigns, isSubscribed }: DashboardReportsPr
               key={campaign.id}
               campaign={campaign}
               isSubscribed={isSubscribed}
+              hasInstantly={hasInstantly}
+              hasSmartlead={hasSmartlead}
             />
           ))}
         </div>

@@ -116,7 +116,7 @@ export type AIRecommendationRequest = z.infer<typeof aiRecommendationRequestSche
 
 // ── Integration Config ────────────────────────────────────────────────────────
 
-export const INTEGRATION_SERVICES = ["apollo", "apify", "heyreach", "instantly", "openai", "hubspot", "slack"] as const;
+export const INTEGRATION_SERVICES = ["apollo", "apify", "heyreach", "instantly", "smartlead", "openai", "hubspot", "slack"] as const;
 
 export const integrationConfigSchema = z.object({
   service: z.enum(INTEGRATION_SERVICES),

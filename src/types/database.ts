@@ -4,7 +4,7 @@ export type ProjectType = "cold_email" | "linkedin" | "multi_channel" | "cold_ca
 
 // ── Execution Layer ──────────────────────────────────────────────────────────
 
-export type IntegrationService = "apollo" | "apify" | "heyreach" | "instantly" | "openai" | "hubspot" | "slack";
+export type IntegrationService = "apollo" | "apify" | "heyreach" | "instantly" | "smartlead" | "openai" | "hubspot" | "slack";
 export type ExecutionStatus = "pending" | "running" | "completed" | "failed";
 export type ActionType = "apollo_enrich" | "sfc_sequence_builder" | "campaign_workflow";
 

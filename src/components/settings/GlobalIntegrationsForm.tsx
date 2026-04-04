@@ -41,8 +41,14 @@ const SERVICE_META = {
   },
   instantly: {
     label: "Instantly.ai",
-    description: "Check duplicates and push email sequences to Instantly campaigns.",
+    description: "Check duplicates, push email sequences, and sync campaign analytics.",
     placeholder: "MmIwMTA4...",
+    usedIn: "Email outreach",
+  },
+  smartlead: {
+    label: "Smartlead",
+    description: "Sync cold email campaign analytics and reply data from Smartlead.",
+    placeholder: "sl_live_...",
     usedIn: "Email outreach",
   },
   hubspot: {

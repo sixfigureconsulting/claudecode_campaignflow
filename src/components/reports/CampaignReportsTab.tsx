@@ -11,6 +11,7 @@ import { FunnelVisualization } from "@/components/charts/FunnelVisualization";
 import { MetricsList } from "@/components/reports/MetricsList";
 import { CSVUploadSection } from "@/components/reports/CSVUploadSection";
 import { ManualMetricsForm } from "@/components/reports/ManualMetricsForm";
+import { SyncReportCard } from "@/components/reports/SyncReportCard";
 import { AIRecommendationSection } from "@/components/ai/AIRecommendationSection";
 import { computeFunnelMetrics } from "@/lib/funnel";
 import { formatDate } from "@/lib/utils";
@@ -23,16 +24,22 @@ interface CampaignReportsTabProps {
   projectId: string;
   reports: ReportWithMetrics[];
   isSubscribed: boolean;
+  hasInstantly?: boolean;
+  hasSmartlead?: boolean;
 }
 
 function ReportRow({
   report,
   projectId,
+  hasInstantly,
+  hasSmartlead,
   isSubscribed,
 }: {
   report: ReportWithMetrics;
   projectId: string;
   isSubscribed: boolean;
+  hasInstantly?: boolean;
+  hasSmartlead?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -124,8 +131,13 @@ function ReportRow({
           {/* Expanded content */}
           {expanded && (
             <div className="px-4 pb-6 space-y-6 border-t border-border pt-4">
-              {/* Add metrics */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Add metrics — 3 ways */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <SyncReportCard
+                  reportId={report.id}
+                  hasInstantly={!!hasInstantly}
+                  hasSmartlead={!!hasSmartlead}
+                />
                 <CSVUploadSection reportId={report.id} />
                 <ManualMetricsForm reportId={report.id} />
               </div>
@@ -163,7 +175,7 @@ function ReportRow({
   );
 }
 
-export function CampaignReportsTab({ projectId, reports, isSubscribed }: CampaignReportsTabProps) {
+export function CampaignReportsTab({ projectId, reports, isSubscribed, hasInstantly, hasSmartlead }: CampaignReportsTabProps) {
   const sorted = [...reports].sort(
     (a, b) => new Date(b.report_date).getTime() - new Date(a.report_date).getTime()
   );
@@ -188,6 +200,8 @@ export function CampaignReportsTab({ projectId, reports, isSubscribed }: Campaig
               key={report.id}
               report={report}
               projectId={projectId}
+              hasInstantly={hasInstantly}
+              hasSmartlead={hasSmartlead}
               isSubscribed={isSubscribed}
             />
           ))}
