@@ -51,12 +51,12 @@ export function DashboardStats({ stats }: { stats: DashboardStatsExtended }) {
     },
     {
       label: "Open Rate",
-      value: `${stats.openRate.toFixed(2)}%`,
+      value: `${Math.round(stats.openRate * 10) / 10}%`,
       dotColor: "bg-blue-500",
     },
     {
       label: "Reply Rate",
-      value: `${stats.replyRate.toFixed(2)}%`,
+      value: `${Math.round(stats.replyRate * 10) / 10}%`,
       dotColor: "bg-slate-400",
     },
     {

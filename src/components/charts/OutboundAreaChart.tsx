@@ -64,6 +64,11 @@ function CustomTooltip({ active, payload, label }: any) {
 export function OutboundAreaChart({ data }: OutboundAreaChartProps) {
   const hasData = data.some((d) => d.sent > 0 || d.opens > 0 || d.replies > 0);
 
+  // Pad to at least 2 points so areas render (single point shows only dots)
+  const chartData = data.length === 1
+    ? [{ date: "", sent: 0, opens: 0, replies: 0 }, ...data]
+    : data;
+
   return (
     <Card>
       <CardHeader className="pb-0 pt-5 px-6">
@@ -76,7 +81,7 @@ export function OutboundAreaChart({ data }: OutboundAreaChartProps) {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={data} margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
               <defs>
                 {SERIES.map((s) => (
                   <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">

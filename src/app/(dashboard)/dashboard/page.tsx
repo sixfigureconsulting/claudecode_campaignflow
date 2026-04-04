@@ -5,12 +5,25 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { OutboundAreaChart } from "@/components/charts/OutboundAreaChart";
 import { CampaignAnalyticsTable } from "@/components/dashboard/CampaignAnalyticsTable";
 import { DashboardReports } from "@/components/dashboard/DashboardReports";
-import { computeFunnelMetrics } from "@/lib/funnel";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Dashboard" };
+
+// ── Keyword-based metric detection ─────────────────────────────────────────
+// Matches metric names regardless of which category the user picked
+function metricSum(metrics: any[], keywords: string[]): number {
+  return metrics
+    .filter((m: any) => keywords.some((kw) => m.metric_name.toLowerCase().includes(kw)))
+    .reduce((s: number, m: any) => s + (m.metric_value ?? 0), 0);
+}
+
+const SENT_KW    = ["sent", "email sent", "cold email", "emails sent", "outreach", "contacted", "sequence"];
+const OPEN_KW    = ["open", "opened", "view"];
+const REPLY_KW   = ["repl", "response", "responded"];
+const MEETING_KW = ["book", "booked", "meeting", "demo", "call", "scheduled", "appointment"];
+const REVENUE_KW = ["revenue", "pipeline", "deal won", "won", "closed", "arr", "mrr", "value"];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -35,47 +48,46 @@ export default async function DashboardPage() {
       subscription.trial_ends_at &&
       new Date(subscription.trial_ends_at) > new Date());
 
-  // Exclude system projects from display
+  // Exclude hidden system projects
   const allCampaigns = (campaigns ?? []).filter(
-    (c: any) => c.name !== "__integrations__"
+    (c: any) => c.name !== "__integrations__" && c.name !== "__default__"
   );
 
   // ── Aggregate stats ──────────────────────────────────────────────────────────
-  let totalSent = 0, totalTraffic = 0, totalRevenue = 0, totalSpend = 0;
-  let totalReports = 0, totalCustom = 0;
+  let totalSent = 0, totalOpens = 0, totalReplies = 0, totalMeetings = 0, totalRevenue = 0;
+  let totalReports = 0;
 
   const campaignRows = allCampaigns.map((campaign: any) => {
-    let sent = 0, opens = 0, replies = 0, pipeline = 0, opportunities = 0;
+    let sent = 0, opens = 0, replies = 0, meetings = 0, pipeline = 0;
 
     (campaign.reports ?? []).forEach((report: any) => {
       totalReports++;
       const metrics = report.report_metrics ?? [];
-      const funnel = computeFunnelMetrics(metrics);
-      const leadsVal = metrics.filter((m: any) => m.metric_category === "leads").reduce((s: number, m: any) => s + m.metric_value, 0);
-      const trafficVal = metrics.filter((m: any) => m.metric_category === "traffic").reduce((s: number, m: any) => s + m.metric_value, 0);
-      const revenueVal = metrics.filter((m: any) => m.metric_category === "revenue").reduce((s: number, m: any) => s + m.metric_value, 0);
-      const customVal = metrics.filter((m: any) => m.metric_category === "custom").reduce((s: number, m: any) => s + m.metric_value, 0);
-      sent += leadsVal; opens += trafficVal; replies += customVal; pipeline += revenueVal;
-      opportunities += funnel.customers;
-      totalSent += leadsVal; totalTraffic += trafficVal; totalRevenue += revenueVal;
-      totalSpend += funnel.spend; totalCustom += customVal;
+
+      const s = metricSum(metrics, SENT_KW);
+      const o = metricSum(metrics, OPEN_KW);
+      const r = metricSum(metrics, REPLY_KW);
+      const m = metricSum(metrics, MEETING_KW);
+      const rev = metricSum(metrics, REVENUE_KW);
+
+      sent += s; opens += o; replies += r; meetings += m; pipeline += rev;
+      totalSent += s; totalOpens += o; totalReplies += r; totalMeetings += m; totalRevenue += rev;
     });
 
     return {
       ...campaign,
       sent,
       opens,
-      openRate: sent > 0 ? (opens / sent) * 100 : 0,
+      openRate: sent > 0 ? Math.min((opens / sent) * 100, 100) : 0,
       replies,
-      replyRate: sent > 0 ? (replies / sent) * 100 : 0,
+      replyRate: sent > 0 ? Math.min((replies / sent) * 100, 100) : 0,
       pipeline,
-      opportunities,
+      opportunities: meetings,
     };
   });
 
-  const openRate = totalSent > 0 ? (totalTraffic / totalSent) * 100 : 0;
-  const replyRate = totalSent > 0 ? (totalCustom / totalSent) * 100 : 0;
-  const meetingsBooked = campaignRows.reduce((s: number, c: any) => s + c.opportunities, 0);
+  const openRate  = totalSent > 0 ? Math.min((totalOpens   / totalSent) * 100, 100) : 0;
+  const replyRate = totalSent > 0 ? Math.min((totalReplies / totalSent) * 100, 100) : 0;
 
   const stats = {
     totalClients: allCampaigns.length,
@@ -83,13 +95,13 @@ export default async function DashboardPage() {
     totalReports,
     totalRevenue,
     totalLeads: totalSent,
-    totalSpend,
+    totalSpend: 0,
     avgROI: replyRate,
     avgConversionRate: openRate,
     totalSent,
     openRate,
     replyRate,
-    meetingsBooked,
+    meetingsBooked: totalMeetings,
   };
 
   // ── Time-series chart data ───────────────────────────────────────────────────
@@ -100,9 +112,9 @@ export default async function DashboardPage() {
       if (!dateKey) return;
       if (!byDate[dateKey]) byDate[dateKey] = { sent: 0, opens: 0, replies: 0 };
       const metrics = report.report_metrics ?? [];
-      byDate[dateKey].sent += metrics.filter((m: any) => m.metric_category === "leads").reduce((s: number, m: any) => s + m.metric_value, 0);
-      byDate[dateKey].opens += metrics.filter((m: any) => m.metric_category === "traffic").reduce((s: number, m: any) => s + m.metric_value, 0);
-      byDate[dateKey].replies += metrics.filter((m: any) => m.metric_category === "custom").reduce((s: number, m: any) => s + m.metric_value, 0);
+      byDate[dateKey].sent    += metricSum(metrics, SENT_KW);
+      byDate[dateKey].opens   += metricSum(metrics, OPEN_KW);
+      byDate[dateKey].replies += metricSum(metrics, REPLY_KW);
     });
   });
 
@@ -138,7 +150,7 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Activity over time</h2>
           <span className="text-xs text-muted-foreground border border-border rounded-md px-2.5 py-1">
-            Last {Math.min(chartData.length, 12)} reports
+            Last {Math.min(chartData.length, 12)} report{chartData.length !== 1 ? "s" : ""}
           </span>
         </div>
         <OutboundAreaChart data={chartData} />
