@@ -19,26 +19,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Validate subscription (must be active or trialing)
-    const { data: subscription } = await supabase
-      .from("subscriptions")
-      .select("status, trial_ends_at")
-      .eq("user_id", user.id)
-      .single();
-
-    const isAllowed =
-      subscription?.status === "active" ||
-      (subscription?.status === "trialing" &&
-        subscription.trial_ends_at &&
-        new Date(subscription.trial_ends_at) > new Date());
-
-    if (!isAllowed) {
-      return NextResponse.json(
-        { error: "Subscription required to generate AI recommendations" },
-        { status: 403 }
-      );
-    }
-
     // 3. Parse and validate request body
     const body = await request.json();
     const parsed = aiRecommendationRequestSchema.safeParse(body);

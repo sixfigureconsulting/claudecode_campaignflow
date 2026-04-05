@@ -65,10 +65,14 @@ export function CampaignsList({ campaigns }: { campaigns: any[] }) {
           const config = CAMPAIGN_TYPE_CONFIG[subtype] ?? CAMPAIGN_TYPE_CONFIG.custom;
           const icon = TYPE_ICONS[subtype] ?? TYPE_ICONS.custom;
           const reportCount = campaign.reports?.length ?? 0;
+          const firstReportId = campaign.reports?.[0]?.id ?? null;
+          const cardHref = firstReportId
+            ? `/campaigns/${campaign.id}/reports/${firstReportId}`
+            : `/campaigns/${campaign.id}`;
 
           return (
             <div key={campaign.id} className="relative group/card">
-              <Link href={`/campaigns/${campaign.id}`}>
+              <Link href={cardHref}>
                 <Card className="h-full hover:shadow-md hover:border-brand-200 transition-all cursor-pointer group">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-3">
@@ -91,10 +95,13 @@ export function CampaignsList({ campaigns }: { campaigns: any[] }) {
                       </p>
                     )}
 
-                    <div className="mt-3 pt-3 border-t border-border">
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">
-                        {reportCount} report{reportCount !== 1 ? "s" : ""}
+                        {firstReportId ? "View report →" : "Set up workflow →"}
                       </p>
+                      {firstReportId && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

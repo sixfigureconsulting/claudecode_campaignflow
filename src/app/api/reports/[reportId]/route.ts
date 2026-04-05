@@ -46,12 +46,21 @@ export async function DELETE(
 
   const { data: report } = await supabase
     .from("reports")
-    .select("id, projects!inner(clients!inner(user_id))")
+    .select("id, projects!inner(name, clients!inner(user_id))")
     .eq("id", reportId)
     .single();
 
   if (!report || (report as any).projects.clients.user_id !== user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Only standalone (sync-only) reports can be deleted directly.
+  // Campaign-integrated reports are deleted when their campaign is deleted.
+  if ((report as any).projects.name !== "__standalone__") {
+    return NextResponse.json(
+      { error: "Campaign reports can only be deleted by deleting the campaign." },
+      { status: 403 }
+    );
   }
 
   const { error } = await supabase.from("reports").delete().eq("id", reportId);

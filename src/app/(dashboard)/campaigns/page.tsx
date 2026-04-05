@@ -11,12 +11,16 @@ export default async function CampaignsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Fetch all campaigns owned by this user (via their clients)
-  const { data: campaigns } = await supabase
+  // Fetch campaigns — filter hidden system projects in JS (Supabase can't neq on joined cols)
+  const { data: rawCampaigns } = await supabase
     .from("projects")
-    .select("*, clients!inner(user_id), reports(id)")
+    .select("*, clients!inner(user_id, name), reports(id)")
     .eq("clients.user_id", user.id)
     .order("created_at", { ascending: false });
+
+  const campaigns = (rawCampaigns ?? []).filter(
+    (c: any) => c.name !== "__integrations__" && c.name !== "__standalone__" && c.clients?.name !== "__standalone__"
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">

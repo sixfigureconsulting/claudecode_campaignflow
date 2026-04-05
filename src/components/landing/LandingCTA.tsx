@@ -42,7 +42,7 @@ export function LandingCTA() {
         </div>
 
         <p className="text-brand-400 text-sm mt-6">
-          7-day free trial · $19/mo or $97/yr after · Cancel anytime
+          7-day free trial · $97/mo or $497/yr after · Cancel anytime
         </p>
       </div>
     </section>

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AIRecommendationReport } from "./AIRecommendationReport";
-import { Lock, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
+import { Sparkles, RefreshCw, AlertCircle } from "lucide-react";
 import type { AIRecommendation, AIProvider } from "@/types";
 import Link from "next/link";
 
@@ -63,30 +63,6 @@ export function AIRecommendationSection({
       setLoading(false);
     }
   };
-
-  // Locked for non-subscribers
-  if (!isSubscribed) {
-    return (
-      <Card className="border-brand-200 bg-brand-50/50">
-        <CardContent className="py-10 text-center">
-          <div className="w-12 h-12 bg-brand-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Lock className="h-6 w-6 text-brand-600" />
-          </div>
-          <h3 className="font-semibold text-lg mb-1">AI Recommendations</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
-            Get AI-powered marketing analysis, bottleneck identification, and tactical action steps.
-            Available on paid plans.
-          </p>
-          <Link href="/billing">
-            <Button variant="gradient" size="lg">
-              <Sparkles className="h-4 w-4" />
-              Upgrade to Unlock
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (!hasMetrics) {
     return (

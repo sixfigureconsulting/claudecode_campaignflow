@@ -1,28 +1,28 @@
 const STEPS = [
   {
     step: "01",
-    title: "Add your client",
-    description: "Create a client profile with their industry, offer, and website. Takes 60 seconds.",
+    title: "Connect your outbound tool",
+    description: "Add your Instantly, HeyReach, Smartlead, or Lemlist API key in Settings. Takes 30 seconds. Your key is AES-256 encrypted.",
   },
   {
     step: "02",
-    title: "Create a campaign",
-    description: "Define the outbound type — Cold Email, LinkedIn Outreach, Multi-Channel Sequence, or Custom.",
+    title: "Create a campaign or standalone report",
+    description: "Create a campaign to track ongoing outbound, or go straight to Reports for a one-off analysis of any existing sequence.",
   },
   {
     step: "03",
-    title: "Import leads or enter metrics",
-    description: "Import from Apollo, Instantly, or any CSV. Or manually enter your sequence KPIs. We handle the mapping.",
+    title: "Sync live data",
+    description: "Click 'Sync from Instantly' (or your connected tool) and your real metrics — sent, opens, replies, meetings — are pulled in instantly.",
   },
   {
     step: "04",
-    title: "Get AI analysis",
-    description: "Click 'Generate AI Report' and receive a complete performance analysis in under 60 seconds.",
+    title: "Generate your AI report",
+    description: "Choose OpenAI or Claude, click Generate. Get a full performance analysis, bottleneck diagnosis, and 5 tactical action steps in under 60 seconds.",
   },
   {
     step: "05",
-    title: "Act on it",
-    description: "Execute the 5 tactical action steps. Share the PDF with your client. Move fast.",
+    title: "Act on it and share",
+    description: "Execute the fixes. Email the report to yourself or your client directly from the app. Compare week-over-week to track improvement.",
   },
 ];
 
@@ -35,10 +35,10 @@ export function LandingHowItWorks() {
             How It Works
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            From lead list to action plan in minutes
+            From raw campaign data to action plan in minutes
           </h2>
           <p className="text-gray-600 text-lg max-w-xl mx-auto">
-            No complex setup. No integrations required. Just results.
+            Connect once. Sync anytime. Get AI recommendations that actually tell you what to fix.
           </p>
         </div>
 

@@ -35,46 +35,58 @@ async function getGlobalApiKey(
 }
 
 // ── Instantly sync ────────────────────────────────────────────────────────────
-// Docs: https://developer.instantly.ai/
-// Fetches aggregate analytics across all campaigns in the workspace
+// API confirmed: GET /api/v2/campaigns/analytics returns an array of per-campaign
+// objects. Fields: emails_sent_count, open_count, reply_count, bounced_count,
+// contacted_count, total_opportunities, total_opportunity_value.
+// Status values: 1=active, 2=paused, 3=stopped.
 
-async function syncInstantly(apiKey: string): Promise<{ metrics: MetricRow[]; source: string }> {
-  // Get list of campaigns
-  const listRes = await fetch("https://api.instantly.ai/api/v2/campaigns?limit=100&status=1", {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
+async function syncInstantly(
+  apiKey: string,
+  campaignId?: string,
+  campaignName?: string
+): Promise<{ metrics: MetricRow[]; source: string }> {
+  const headers = { Authorization: `Bearer ${apiKey}` };
 
-  if (!listRes.ok) {
-    throw new Error(`Instantly API error: ${listRes.status} ${await listRes.text()}`);
+  const url = campaignId
+    ? `https://api.instantly.ai/api/v2/campaigns/analytics?id=${campaignId}`
+    : "https://api.instantly.ai/api/v2/campaigns/analytics";
+
+  const analyticsRes = await fetch(url, { headers });
+
+  if (!analyticsRes.ok) {
+    throw new Error(`Instantly API error: ${analyticsRes.status} ${await analyticsRes.text()}`);
   }
 
-  const listData = await listRes.json();
-  const campaigns: any[] = listData.items ?? listData.campaigns ?? [];
+  const analyticsData = await analyticsRes.json();
+  const rows: any[] = Array.isArray(analyticsData) ? analyticsData : [];
 
-  let totalSent = 0, totalOpened = 0, totalReplied = 0, totalBounced = 0;
+  let totalSent = 0, totalOpened = 0, totalReplied = 0, totalBounced = 0,
+      totalContacted = 0, totalOpportunities = 0, totalOpportunityValue = 0;
 
-  // Aggregate analytics per campaign
-  for (const campaign of campaigns.slice(0, 20)) {
-    const analyticsRes = await fetch(
-      `https://api.instantly.ai/api/v2/analytics/campaign/count?campaign_id=${campaign.id}`,
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    );
-    if (!analyticsRes.ok) continue;
-    const a = await analyticsRes.json();
-    totalSent    += a.emails_sent_count ?? a.total_sent ?? 0;
-    totalOpened  += a.unique_opens ?? a.opened ?? 0;
-    totalReplied += a.total_replies ?? a.replied ?? 0;
-    totalBounced += a.bounced ?? 0;
+  for (const row of rows) {
+    totalSent             += row.emails_sent_count    ?? 0;
+    totalOpened           += row.open_count_unique    ?? row.open_count ?? 0;
+    totalReplied          += row.reply_count          ?? 0;
+    totalBounced          += row.bounced_count        ?? 0;
+    totalContacted        += row.contacted_count      ?? 0;
+    totalOpportunities    += row.total_opportunities  ?? 0;
+    totalOpportunityValue += row.total_opportunity_value ?? 0;
   }
 
   const metrics: MetricRow[] = ([
-    { name: "Emails Sent",    value: totalSent,    category: "leads"   as const },
-    { name: "Emails Opened",  value: totalOpened,  category: "traffic" as const },
-    { name: "Replies",        value: totalReplied, category: "custom"  as const },
-    { name: "Bounced",        value: totalBounced, category: "custom"  as const },
+    { name: "Emails Sent",         value: totalSent,             category: "leads"   as const },
+    { name: "Unique Opens",        value: totalOpened,           category: "traffic" as const },
+    { name: "Replies",             value: totalReplied,          category: "custom"  as const },
+    { name: "Bounced",             value: totalBounced,          category: "custom"  as const },
+    { name: "Opportunities",       value: totalOpportunities,    category: "leads"   as const },
+    { name: "Pipeline Value ($)",  value: totalOpportunityValue, category: "revenue" as const },
   ] as MetricRow[]).filter((m) => m.value > 0);
 
-  return { metrics, source: `Instantly (${campaigns.length} campaign${campaigns.length !== 1 ? "s" : ""})` };
+  const sourceLabel = campaignName
+    ? `Instantly — ${campaignName}`
+    : `Instantly (${rows.length} campaign${rows.length !== 1 ? "s" : ""})`;
+
+  return { metrics, source: sourceLabel };
 }
 
 // ── Smartlead sync ────────────────────────────────────────────────────────────
@@ -126,7 +138,78 @@ type MetricRow = {
   category: "traffic" | "leads" | "revenue" | "cost" | "custom";
 };
 
+// ── HeyReach sync ─────────────────────────────────────────────────────────────
+// Docs: https://api.heyreach.io/api-documentation
+
+async function syncHeyreach(apiKey: string): Promise<{ metrics: MetricRow[]; source: string }> {
+  // Get all campaigns
+  const listRes = await fetch("https://api.heyreach.io/api/public/campaign/GetAll", {
+    method: "POST",
+    headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ offset: 0, limit: 50 }),
+  });
+
+  if (!listRes.ok) throw new Error(`HeyReach API error: ${listRes.status} ${await listRes.text()}`);
+
+  const listData = await listRes.json();
+  const campaigns: any[] = listData.items ?? listData.data ?? [];
+
+  let totalSent = 0, totalAccepted = 0, totalReplied = 0, totalMeetings = 0;
+
+  for (const c of campaigns.slice(0, 20)) {
+    totalSent     += c.stats?.connection_requests_sent ?? c.totalCount ?? 0;
+    totalAccepted += c.stats?.connection_requests_accepted ?? c.acceptedCount ?? 0;
+    totalReplied  += c.stats?.messages_replied ?? c.repliedCount ?? 0;
+    totalMeetings += c.stats?.meetings_booked ?? 0;
+  }
+
+  const metrics: MetricRow[] = ([
+    { name: "Connection Requests Sent", value: totalSent,     category: "leads"   as const },
+    { name: "Connections Accepted",     value: totalAccepted, category: "traffic" as const },
+    { name: "Replies",                  value: totalReplied,  category: "custom"  as const },
+    { name: "Meetings Booked",          value: totalMeetings, category: "custom"  as const },
+  ] as MetricRow[]).filter((m) => m.value > 0);
+
+  return { metrics, source: `HeyReach (${campaigns.length} campaign${campaigns.length !== 1 ? "s" : ""})` };
+}
+
+// ── Lemlist sync ──────────────────────────────────────────────────────────────
+// Docs: https://developer.lemlist.com/
+
+async function syncLemlist(apiKey: string): Promise<{ metrics: MetricRow[]; source: string }> {
+  const headers = { Authorization: `Basic ${Buffer.from(`:${apiKey}`).toString("base64")}` };
+
+  const listRes = await fetch("https://api.lemlist.com/api/campaigns", { headers });
+  if (!listRes.ok) throw new Error(`Lemlist API error: ${listRes.status} ${await listRes.text()}`);
+
+  const campaigns: any[] = await listRes.json();
+
+  let totalSent = 0, totalOpened = 0, totalReplied = 0, totalBounced = 0;
+
+  for (const c of (campaigns ?? []).slice(0, 20)) {
+    const statsRes = await fetch(`https://api.lemlist.com/api/campaigns/${c._id}/stats`, { headers });
+    if (!statsRes.ok) continue;
+    const s = await statsRes.json();
+    totalSent    += s.emailsSent ?? 0;
+    totalOpened  += s.emailsOpened ?? 0;
+    totalReplied += s.emailsReplied ?? 0;
+    totalBounced += s.emailsBounced ?? 0;
+  }
+
+  const metrics: MetricRow[] = ([
+    { name: "Emails Sent",   value: totalSent,    category: "leads"   as const },
+    { name: "Emails Opened", value: totalOpened,  category: "traffic" as const },
+    { name: "Replies",       value: totalReplied, category: "custom"  as const },
+    { name: "Bounced",       value: totalBounced, category: "custom"  as const },
+  ] as MetricRow[]).filter((m) => m.value > 0);
+
+  return { metrics, source: `Lemlist (${(campaigns ?? []).length} campaign${(campaigns ?? []).length !== 1 ? "s" : ""})` };
+}
+
 // ── Route handler ─────────────────────────────────────────────────────────────
+
+const SUPPORTED_TOOLS = ["instantly", "smartlead", "heyreach", "lemlist"] as const;
+type SyncTool = typeof SUPPORTED_TOOLS[number];
 
 export async function POST(request: NextRequest) {
   try {
@@ -134,8 +217,8 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { reportId, tool } = await request.json();
-    if (!reportId || !["instantly", "smartlead"].includes(tool)) {
+    const { reportId, tool, campaignId, campaignName } = await request.json();
+    if (!reportId || !SUPPORTED_TOOLS.includes(tool)) {
       return NextResponse.json({ error: "Missing reportId or invalid tool" }, { status: 400 });
     }
 
@@ -158,9 +241,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch from the tool's API
-    const { metrics, source } = tool === "instantly"
-      ? await syncInstantly(apiKey)
-      : await syncSmartlead(apiKey);
+    let metrics: MetricRow[];
+    let source: string;
+
+    if (tool === "instantly") {
+      ({ metrics, source } = await syncInstantly(apiKey, campaignId, campaignName));
+    } else if (tool === "smartlead") {
+      ({ metrics, source } = await syncSmartlead(apiKey));
+    } else if (tool === "heyreach") {
+      ({ metrics, source } = await syncHeyreach(apiKey));
+    } else {
+      ({ metrics, source } = await syncLemlist(apiKey));
+    }
 
     if (metrics.length === 0) {
       return NextResponse.json({ error: "No data returned from the API. Check that your account has active campaigns." }, { status: 400 });

@@ -265,10 +265,10 @@ function IntegrationCard({
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-shadow ${expanded ? "shadow-md border-brand-200" : "hover:shadow-sm"}`}>
       {/* Card header */}
-      <div className="flex items-center gap-4 p-5">
+      <div className="flex items-start gap-4 p-6">
         <ServiceLogo logo={meta.logo} name={meta.label} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="font-semibold text-sm">{meta.label}</span>
             {connected && (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
@@ -280,7 +280,7 @@ function IntegrationCard({
               {meta.usedIn}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{meta.description}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{meta.description}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {connected && !expanded && (
@@ -399,7 +399,7 @@ export function GlobalIntegrationsForm({ existingConfigs }: { existingConfigs: S
       {/* ── Standard integrations ─────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Integrations</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {Object.entries(INTEGRATIONS).map(([id, meta]) => (
             <IntegrationCard
               key={id}

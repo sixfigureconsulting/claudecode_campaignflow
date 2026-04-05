@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Check, Zap } from "lucide-react";
 
 const FEATURES = [
-  "Unlimited clients",
-  "Unlimited projects & reports",
-  "CSV upload & auto-mapping",
-  "Full funnel computation",
-  "AI recommendation reports",
-  "PDF export",
+  "Unlimited campaigns & reports",
+  "CSV lead list import with auto-mapping",
+  "Outbound funnel tracking (Sent → Opens → Replies → Meetings)",
+  "AI sequence recommendations (OpenAI or Claude)",
+  "Visual performance dashboard & charts",
   "Week-over-week comparison",
-  "OpenAI + Claude support",
+  "PDF export of AI reports",
+  "Bring your own API key (AES-256 encrypted)",
   "Priority support",
 ];
 

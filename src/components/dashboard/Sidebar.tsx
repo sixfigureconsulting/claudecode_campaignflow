@@ -10,6 +10,7 @@ import {
   TrendingUp,
   ChevronRight,
   Database,
+  FileBarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,11 @@ const navItems = [
     href: "/lists",
     label: "Lists",
     icon: Database,
+  },
+  {
+    href: "/reports",
+    label: "Reports",
+    icon: FileBarChart2,
   },
   {
     href: "/billing",

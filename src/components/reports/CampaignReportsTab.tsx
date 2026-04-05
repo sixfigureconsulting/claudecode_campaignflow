@@ -9,8 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AddReportDialog } from "@/components/reports/AddReportDialog";
 import { FunnelVisualization } from "@/components/charts/FunnelVisualization";
 import { MetricsList } from "@/components/reports/MetricsList";
-import { CSVUploadSection } from "@/components/reports/CSVUploadSection";
-import { ManualMetricsForm } from "@/components/reports/ManualMetricsForm";
 import { SyncReportCard } from "@/components/reports/SyncReportCard";
 import { AIRecommendationSection } from "@/components/ai/AIRecommendationSection";
 import { computeFunnelMetrics } from "@/lib/funnel";
@@ -131,16 +129,14 @@ function ReportRow({
           {/* Expanded content */}
           {expanded && (
             <div className="px-4 pb-6 space-y-6 border-t border-border pt-4">
-              {/* Add metrics — 3 ways */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <SyncReportCard
-                  reportId={report.id}
-                  hasInstantly={!!hasInstantly}
-                  hasSmartlead={!!hasSmartlead}
-                />
-                <CSVUploadSection reportId={report.id} />
-                <ManualMetricsForm reportId={report.id} />
-              </div>
+              {/* Sync metrics */}
+              <SyncReportCard
+                reportId={report.id}
+                connectedTools={[
+                  ...(hasInstantly ? ["instantly" as const] : []),
+                  ...(hasSmartlead ? ["smartlead" as const] : []),
+                ]}
+              />
 
               {/* Funnel & metrics */}
               {metrics.length > 0 && (

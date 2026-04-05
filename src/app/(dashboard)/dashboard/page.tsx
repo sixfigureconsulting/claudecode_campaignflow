@@ -48,9 +48,9 @@ export default async function DashboardPage() {
       subscription.trial_ends_at &&
       new Date(subscription.trial_ends_at) > new Date());
 
-  // Exclude hidden system projects
+  // Exclude hidden system projects (include __standalone__ so its reports count in totals)
   const allCampaigns = (campaigns ?? []).filter(
-    (c: any) => c.name !== "__integrations__" && c.name !== "__default__"
+    (c: any) => c.name !== "__integrations__" && c.name !== "__default__" && c.clients?.name !== "__default__"
   );
 
   // Check which email sync tools are connected

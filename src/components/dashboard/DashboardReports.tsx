@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Megaphone, Plus } from "lucide-react";
+import { ChevronRight, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CampaignReportsTab } from "@/components/reports/CampaignReportsTab";
 import { CAMPAIGN_TYPE_CONFIG, getCampaignSubtype } from "@/components/campaigns/campaignTypes";
 import { cn } from "@/lib/utils";
 
@@ -13,68 +11,6 @@ interface DashboardReportsProps {
   isSubscribed: boolean;
   hasInstantly?: boolean;
   hasSmartlead?: boolean;
-}
-
-function CampaignReportSection({
-  campaign,
-  isSubscribed,
-  hasInstantly,
-  hasSmartlead,
-}: {
-  campaign: any;
-  isSubscribed: boolean;
-  hasInstantly?: boolean;
-  hasSmartlead?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const config = CAMPAIGN_TYPE_CONFIG[getCampaignSubtype(campaign)] ?? CAMPAIGN_TYPE_CONFIG.custom;
-  const reportCount = campaign.reports?.length ?? 0;
-
-  return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      {/* Campaign header row */}
-      <button
-        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors text-left"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0", config.color)}>
-          {campaign.name.slice(0, 2).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{campaign.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {config.label} · {reportCount} report{reportCount !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href={`/campaigns/${campaign.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="text-xs text-muted-foreground hover:text-brand-600 transition-colors px-2 py-1 rounded hover:bg-muted"
-          >
-            Open workflow
-          </Link>
-          {open
-            ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            : <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          }
-        </div>
-      </button>
-
-      {/* Reports — inline expansion */}
-      {open && (
-        <div className="border-t border-border px-5 py-5 bg-muted/10">
-          <CampaignReportsTab
-            projectId={campaign.id}
-            reports={campaign.reports ?? []}
-            isSubscribed={isSubscribed}
-            hasInstantly={hasInstantly}
-            hasSmartlead={hasSmartlead}
-          />
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function DashboardReports({ campaigns, isSubscribed, hasInstantly, hasSmartlead }: DashboardReportsProps) {
@@ -108,16 +44,37 @@ export function DashboardReports({ campaigns, isSubscribed, hasInstantly, hasSma
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {campaigns.map((campaign) => (
-            <CampaignReportSection
-              key={campaign.id}
-              campaign={campaign}
-              isSubscribed={isSubscribed}
-              hasInstantly={hasInstantly}
-              hasSmartlead={hasSmartlead}
-            />
-          ))}
+        <div className="space-y-2">
+          {campaigns.map((campaign) => {
+            const config = CAMPAIGN_TYPE_CONFIG[getCampaignSubtype(campaign)] ?? CAMPAIGN_TYPE_CONFIG.custom;
+            const reports = campaign.reports ?? [];
+            const firstReportId = reports[0]?.id ?? null;
+            const href = firstReportId
+              ? `/campaigns/${campaign.id}/reports/${firstReportId}`
+              : `/campaigns/${campaign.id}/workflow`;
+
+            return (
+              <Link
+                key={campaign.id}
+                href={href}
+                className="flex items-center gap-3 px-5 py-4 border border-border rounded-xl hover:bg-muted/30 hover:border-brand-200 transition-all group"
+              >
+                <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold shrink-0", config.color)}>
+                  {campaign.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate group-hover:text-brand-600 transition-colors">{campaign.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {config.label} · {reports.length} report{reports.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground group-hover:text-brand-600 transition-colors shrink-0">
+                  {firstReportId ? "View report" : "Open workflow"}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-brand-600 transition-colors shrink-0" />
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
