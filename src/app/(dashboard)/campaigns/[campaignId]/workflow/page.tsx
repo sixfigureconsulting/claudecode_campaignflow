@@ -9,9 +9,9 @@ import { CampaignWorkflow } from "@/components/executions/CampaignWorkflow";
 import { CampaignScheduler } from "@/components/executions/CampaignScheduler";
 import { ExecutionHistory } from "@/components/executions/ExecutionHistory";
 
-export const metadata: Metadata = { title: "Campaign" };
+export const metadata: Metadata = { title: "Workflow" };
 
-export default async function CampaignPage({
+export default async function CampaignWorkflowPage({
   params,
 }: {
   params: Promise<{ campaignId: string }>;
@@ -30,7 +30,7 @@ export default async function CampaignPage({
 
   if (!campaign) notFound();
 
-  // If a report already exists, send the user straight to it
+  // Get the report (if any) so we can link back to it
   const { data: existingReports } = await supabase
     .from("reports")
     .select("id")
@@ -38,11 +38,8 @@ export default async function CampaignPage({
     .order("created_at", { ascending: false })
     .limit(1);
 
-  if (existingReports && existingReports.length > 0) {
-    redirect(`/campaigns/${campaignId}/reports/${existingReports[0].id}`);
-  }
+  const reportId = existingReports?.[0]?.id ?? null;
 
-  // Read which services are connected (global integrations project)
   let integrationConfigs: { service: string }[] = [];
   try {
     const { data: defaultClient } = await supabase
@@ -76,19 +73,26 @@ export default async function CampaignPage({
   const connectedCallingServices = CALLING_PLATFORM_IDS.filter(hasKey);
 
   const subtype = getCampaignSubtype(campaign);
-
   const typeLabel = CAMPAIGN_TYPE_LABELS[subtype] ?? subtype;
 
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
         <Link href="/campaigns" className="hover:text-foreground flex items-center gap-1">
           <ArrowLeft className="h-3.5 w-3.5" />
           Campaigns
         </Link>
         <span>/</span>
-        <span className="text-foreground font-medium">{campaign.name}</span>
+        {reportId ? (
+          <Link href={`/campaigns/${campaignId}/reports/${reportId}`} className="hover:text-foreground">
+            {campaign.name}
+          </Link>
+        ) : (
+          <span className="text-foreground font-medium">{campaign.name}</span>
+        )}
+        <span>/</span>
+        <span className="text-foreground font-medium">Workflow</span>
       </div>
 
       {/* Header */}
@@ -100,13 +104,17 @@ export default async function CampaignPage({
             <p className="text-sm text-muted-foreground">{getDisplayDescription(campaign.description)}</p>
           )}
         </div>
-        <p className="text-sm text-muted-foreground mt-2">
-          Build and run your outbound workflow below. View performance and reports on the{" "}
-          <Link href="/dashboard" className="text-brand-600 hover:underline font-medium">Dashboard</Link>.
-        </p>
+        {reportId && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Running a new workflow will update your{" "}
+            <Link href={`/campaigns/${campaignId}/reports/${reportId}`} className="text-brand-600 hover:underline font-medium">
+              campaign report
+            </Link>.
+          </p>
+        )}
       </div>
 
-      {/* Workflow — full page, no tabs */}
+      {/* Workflow */}
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">Outbound Workflow</h2>
@@ -143,7 +151,6 @@ export default async function CampaignPage({
         <CampaignScheduler projectId={campaignId} />
       </div>
 
-      {/* Execution history */}
       {executions && executions.length > 0 && (
         <ExecutionHistory executions={executions} />
       )}
