@@ -283,7 +283,7 @@ const COL_MAP: Record<string, keyof CampaignLead> = {
   "company linkedin url": "linkedin_url", "company linkedin": "linkedin_url",
   // Website
   website: "website", "website url": "website", "company website": "website",
-  "website url": "website", url: "website",
+  url: "website",
   // Phone
   phone: "phone", "phone number": "phone", mobile: "phone",
   "company phone": "phone", "direct phone": "phone", telephone: "phone",
@@ -336,6 +336,21 @@ function parseCSV(text: string): CampaignLead[] {
     const hasIdentifier = l.company || l.first_name;
     return (hasEmail || hasPhone) && hasIdentifier;
   });
+}
+
+const REQUIRED_CSV_FIELDS: { key: keyof CampaignLead; label: string; aliases: string[] }[] = [
+  { key: "first_name",   label: "First Name",   aliases: ["first_name", "firstname", "first name", "first", "name", "full name", "contact name"] },
+  { key: "last_name",    label: "Last Name",    aliases: ["last_name", "lastname", "last name", "last"] },
+  { key: "email",        label: "Email",        aliases: ["email", "email address", "work email", "email_address", "work_email"] },
+  { key: "linkedin_url", label: "LinkedIn URL", aliases: ["linkedin_url", "linkedin", "linkedin url", "linkedin profile url", "linkedin profile"] },
+];
+
+function validateCSVColumns(text: string): string[] {
+  const firstLine = text.trim().split(/\r?\n/)[0] ?? "";
+  const headers = firstLine.split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
+  return REQUIRED_CSV_FIELDS
+    .filter(({ aliases }) => !aliases.some((a) => headers.includes(a)))
+    .map(({ label }) => label);
 }
 
 function extractApolloListId(url: string): string | null {
@@ -580,8 +595,14 @@ export function Step1LeadInput({
     } else if (source.inputType === "csv") {
       if (!file) return;
       const text = await file.text();
+      const missingCols = validateCSVColumns(text);
+      if (missingCols.length > 0) {
+        setMessage(`Missing required columns: ${missingCols.join(", ")}. These fields are needed to run a campaign.`);
+        setStatus("error");
+        return;
+      }
       const leads = parseCSV(text);
-      if (leads.length === 0) { setMessage("No valid leads found. Make sure the CSV has an email or phone column, plus a company or name column."); setStatus("error"); return; }
+      if (leads.length === 0) { setMessage("No valid leads found. Make sure rows have at least a name and email."); setStatus("error"); return; }
       setPreviewLeads(leads); setStatus("done");
       setMessage(`${leads.length} leads parsed from ${source.label}`);
 
