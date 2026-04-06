@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { decryptApiKey } from "@/lib/encryption";
 import { computeFunnelMetrics } from "@/lib/funnel";
 import { buildRecommendationPrompt } from "@/lib/ai/prompt";
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limit: 10 AI calls per user per minute
+    const rl = rateLimit(`ai:${user.id}`, { limit: 10, windowMs: 60_000 });
+    if (!rl.success) return rateLimitResponse(rl.resetAt);
 
     // 3. Parse and validate request body
     const body = await request.json();

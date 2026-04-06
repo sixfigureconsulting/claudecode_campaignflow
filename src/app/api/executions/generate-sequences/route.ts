@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
 import { generateSequencesSchema } from "@/lib/validations";
 import type { InfluenceType } from "@/lib/validations";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 async function verifyOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -164,6 +165,10 @@ export async function POST(request: NextRequest) {
       );
 
     const { projectId, leads, channels, offerContext, influenceType } = parsed.data;
+
+    // Rate limit: 5 generation runs per user per minute (each run calls OpenAI per lead)
+    const rl = rateLimit(`seq:${user.id}`, { limit: 5, windowMs: 60_000 });
+    if (!rl.success) return rateLimitResponse(rl.resetAt);
 
     const owned = await verifyOwnership(supabase, projectId, user.id);
     if (!owned)

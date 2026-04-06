@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { stripe, PLANS, createOrRetrieveCustomer, createCheckoutSession } from "@/lib/stripe";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const checkoutSchema = z.object({
   plan: z.enum(["monthly", "yearly"]),
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Rate limit: 5 checkout attempts per user per 10 minutes
+    const rl = rateLimit(`checkout:${user.id}`, { limit: 5, windowMs: 10 * 60_000 });
+    if (!rl.success) return rateLimitResponse(rl.resetAt);
 
     const body = await request.json();
     const parsed = checkoutSchema.safeParse(body);
