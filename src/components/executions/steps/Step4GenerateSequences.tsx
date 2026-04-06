@@ -3,11 +3,87 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, AlertCircle, Loader2, Zap, Linkedin, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, Loader2, Zap, Linkedin, Mail, ChevronDown, ChevronUp, Gift, TrendingUp, Users, Heart, BadgeCheck, Clock, Globe } from "lucide-react";
 import type { CampaignLead } from "@/types/database";
+import type { InfluenceType } from "@/lib/validations";
 
 const OFFER_STORAGE_KEY = (projectId: string) => `cf_offer_${projectId}`;
+
+const PRINCIPLES: {
+  id: InfluenceType;
+  label: string;
+  tagline: string;
+  icon: React.ElementType;
+  color: string;
+  activeColor: string;
+}[] = [
+  {
+    id: "reciprocity",
+    label: "Reciprocity",
+    tagline: "Lead with genuine value",
+    icon: Gift,
+    color: "border-emerald-200 text-emerald-700 bg-emerald-50",
+    activeColor: "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-300",
+  },
+  {
+    id: "commitment",
+    label: "Commitment",
+    tagline: "Micro-ask first, ladder up",
+    icon: TrendingUp,
+    color: "border-blue-200 text-blue-700 bg-blue-50",
+    activeColor: "border-blue-500 bg-blue-50 ring-2 ring-blue-300",
+  },
+  {
+    id: "social_proof",
+    label: "Social Proof",
+    tagline: "Show peer results",
+    icon: Users,
+    color: "border-purple-200 text-purple-700 bg-purple-50",
+    activeColor: "border-purple-500 bg-purple-50 ring-2 ring-purple-300",
+  },
+  {
+    id: "liking",
+    label: "Liking",
+    tagline: "Genuine research first",
+    icon: Heart,
+    color: "border-rose-200 text-rose-700 bg-rose-50",
+    activeColor: "border-rose-500 bg-rose-50 ring-2 ring-rose-300",
+  },
+  {
+    id: "authority",
+    label: "Authority",
+    tagline: "Establish niche credibility",
+    icon: BadgeCheck,
+    color: "border-amber-200 text-amber-700 bg-amber-50",
+    activeColor: "border-amber-500 bg-amber-50 ring-2 ring-amber-300",
+  },
+  {
+    id: "scarcity",
+    label: "Scarcity",
+    tagline: "Honest urgency only",
+    icon: Clock,
+    color: "border-red-200 text-red-700 bg-red-50",
+    activeColor: "border-red-500 bg-red-50 ring-2 ring-red-300",
+  },
+  {
+    id: "unity",
+    label: "Unity",
+    tagline: "Same tribe framing",
+    icon: Globe,
+    color: "border-cyan-200 text-cyan-700 bg-cyan-50",
+    activeColor: "border-cyan-500 bg-cyan-50 ring-2 ring-cyan-300",
+  },
+];
+
+const PRINCIPLE_HINTS: Record<InfluenceType, string> = {
+  reciprocity: "Opens with a tailored insight, mini-audit, or checklist. CTA is to receive the value — not to book a call.",
+  commitment: "Starts with a 2-min ask. No 30-min meeting requests upfront. Ladders to a call across touches.",
+  social_proof: "Leads with a specific peer result — segment, firm type, and 1–2 real metrics. Quiet confidence, no hype.",
+  liking: "Opens by referencing something observable about the prospect (post, hire, product launch). Smart peer tone.",
+  authority: "Establishes niche focus and result patterns in 1–2 lines. Specificity carries the weight, not a long bio.",
+  scarcity: "Uses concrete, explained urgency — limited slots, cohort, or timing window. Never vague or manufactured.",
+  unity: "Frames shared identity — founder-led, bootstrapped, B2B, geography. 'We, not you vs. me' language throughout.",
+};
 
 export function Step4GenerateSequences({
   projectId,
@@ -23,6 +99,7 @@ export function Step4GenerateSequences({
   onComplete: (leads: CampaignLead[]) => void;
 }) {
   const [channels, setChannels] = useState<Set<string>>(new Set(["email"]));
+  const [influenceType, setInfluenceType] = useState<InfluenceType>("reciprocity");
   const [offerContext, setOfferContext] = useState<string>(() => {
     try { return localStorage.getItem(OFFER_STORAGE_KEY(projectId)) ?? ""; } catch { return ""; }
   });
@@ -57,6 +134,7 @@ export function Step4GenerateSequences({
         leads,
         channels: Array.from(channels),
         offerContext,
+        influenceType,
       }),
     });
     const json = await res.json();
@@ -71,6 +149,8 @@ export function Step4GenerateSequences({
     setStatus("done");
     setMessage(json.summary);
   };
+
+  const selectedPrinciple = PRINCIPLES.find((p) => p.id === influenceType)!;
 
   return (
     <div className="space-y-5">
@@ -108,6 +188,44 @@ export function Step4GenerateSequences({
         </div>
       </div>
 
+      {/* Cialdini principle picker */}
+      <div>
+        <label className="text-sm font-medium text-foreground block mb-1">
+          Influence Framework
+          <span className="ml-1.5 text-xs font-normal text-muted-foreground">— based on Cialdini's Principles of Influence</span>
+        </label>
+        <p className="text-xs text-muted-foreground mb-3">
+          Choose the primary psychological driver for your copy. All 7 principles are woven in — this one leads.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {PRINCIPLES.map((p) => {
+            const Icon = p.icon;
+            const isSelected = influenceType === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => setInfluenceType(p.id)}
+                className={`flex flex-col items-start gap-1 px-3 py-2.5 rounded-lg border text-left transition-all ${
+                  isSelected ? p.activeColor : "border-border hover:border-muted-foreground bg-background"
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "" : "text-muted-foreground"}`} />
+                  <span className={`text-xs font-semibold ${isSelected ? "" : "text-foreground"}`}>{p.label}</span>
+                  {isSelected && <CheckCircle2 className="h-3 w-3 ml-auto shrink-0" />}
+                </div>
+                <span className="text-[11px] text-muted-foreground leading-tight">{p.tagline}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Hint for selected principle */}
+        <div className={`mt-2 px-3 py-2 rounded-lg border text-xs ${selectedPrinciple.color}`}>
+          <span className="font-medium">{selectedPrinciple.label}:</span>{" "}
+          {PRINCIPLE_HINTS[influenceType]}
+        </div>
+      </div>
+
       {/* Offer context */}
       <div>
         <label className="text-sm font-medium text-foreground block mb-1.5">
@@ -137,7 +255,9 @@ export function Step4GenerateSequences({
         onClick={handleGenerate}
       >
         <Zap className="h-4 w-4 mr-2" />
-        {status === "loading" ? `Generating sequences...` : `Generate sequences for ${leads.length} leads`}
+        {status === "loading"
+          ? `Writing ${selectedPrinciple.label}-led sequences...`
+          : `Generate ${selectedPrinciple.label}-led sequences for ${leads.length} leads`}
       </Button>
 
       {status === "error" && (
@@ -149,7 +269,7 @@ export function Step4GenerateSequences({
       {status === "loading" && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Writing personalised sequences... this may take a minute for large lists.
+          Writing personalised sequences using {selectedPrinciple.label} principle... this may take a minute for large lists.
         </div>
       )}
 

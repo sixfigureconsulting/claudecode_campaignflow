@@ -190,11 +190,24 @@ export const checkExclusionsSchema = z.object({
   leads: z.array(leadShape),
 });
 
+export const INFLUENCE_TYPES = [
+  "reciprocity",
+  "commitment",
+  "social_proof",
+  "liking",
+  "authority",
+  "scarcity",
+  "unity",
+] as const;
+
+export type InfluenceType = (typeof INFLUENCE_TYPES)[number];
+
 export const generateSequencesSchema = z.object({
   projectId: z.string().uuid(),
   leads: z.array(leadShape),
   channels: z.array(z.string()).optional().default(["email"]),
   offerContext: z.string().optional().default(""),
+  influenceType: z.enum(INFLUENCE_TYPES).optional().default("reciprocity"),
 });
 
 const PUSH_DESTINATIONS = [
