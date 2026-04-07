@@ -181,13 +181,13 @@ export const fetchLushaLeadsSchema = z.object({
 
 export const qualifyLeadsSchema = z.object({
   projectId: z.string().uuid(),
-  leads: z.array(leadShape),
+  leads: z.array(leadShape).max(500, "Cannot qualify more than 500 leads at once"),
   icpDescription: z.string().optional().default(""),
 });
 
 export const checkExclusionsSchema = z.object({
   projectId: z.string().uuid(),
-  leads: z.array(leadShape),
+  leads: z.array(leadShape).max(500, "Cannot check more than 500 leads at once"),
 });
 
 export const INFLUENCE_TYPES = [
@@ -204,7 +204,7 @@ export type InfluenceType = (typeof INFLUENCE_TYPES)[number];
 
 export const generateSequencesSchema = z.object({
   projectId: z.string().uuid(),
-  leads: z.array(leadShape),
+  leads: z.array(leadShape).max(100, "Cannot generate sequences for more than 100 leads at once"),
   channels: z.array(z.string()).optional().default(["email"]),
   offerContext: z.string().optional().default(""),
   influenceType: z.enum(INFLUENCE_TYPES).optional().default("reciprocity"),
