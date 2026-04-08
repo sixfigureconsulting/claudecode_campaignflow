@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Database,
   FileBarChart2,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,31 +21,43 @@ const navItems = [
     label: "Dashboard",
     icon: LayoutDashboard,
     exact: true,
+    badge: null,
   },
   {
     href: "/campaigns",
     label: "Campaigns",
     icon: Megaphone,
+    badge: null,
   },
   {
     href: "/lists",
     label: "Lists",
     icon: Database,
+    badge: null,
   },
   {
     href: "/reports",
     label: "Reports",
     icon: FileBarChart2,
+    badge: null,
+  },
+  {
+    href: "/super-dm-setter",
+    label: "Super DM Setter",
+    icon: Zap,
+    badge: "NEW",
   },
   {
     href: "/billing",
     label: "Billing",
     icon: CreditCard,
+    badge: null,
   },
   {
     href: "/settings",
     label: "Settings",
     icon: Settings,
+    badge: null,
   },
 ];
 
@@ -84,6 +97,11 @@ export function Sidebar() {
             >
               <item.icon className="h-4 w-4 shrink-0" />
               <span className="flex-1">{item.label}</span>
+              {item.badge && !isActive && (
+                <span className="text-[9px] font-bold tracking-wider bg-brand-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+                  {item.badge}
+                </span>
+              )}
               {isActive && <ChevronRight className="h-3 w-3 opacity-60" />}
             </Link>
           );
