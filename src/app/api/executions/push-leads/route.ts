@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
 import { pushLeadsSchema } from "@/lib/validations";
+import { requireCredits, deductCredits } from "@/lib/credits";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -498,6 +499,15 @@ export async function POST(request: NextRequest) {
     const owned = await verifyOwnership(supabase, projectId, user.id);
     if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    // Credit check — 1 credit per lead pushed
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "push_lead", leads.length);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required} (${leads.length} leads × 1), have ${balance}.` },
+        { status: 402 }
+      );
+    }
+
     const { data: project } = await supabase.from("projects").select("name").eq("id", projectId).single();
     const projectName = project?.name ?? "CampaignFlow";
 
@@ -631,6 +641,8 @@ export async function POST(request: NextRequest) {
       outputs_summary: successDestinations ? `Pushed to ${successDestinations}` : "Push failed",
       completed_at: new Date().toISOString(),
     });
+
+    await deductCredits(supabase, user.id, "push_lead", leads.length, { project_id: projectId });
 
     const instantlyResult = results.instantly as (PushResult & { campaignId?: string }) | undefined;
     const { data: campaignRun } = await supabase

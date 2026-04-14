@@ -15,14 +15,44 @@ export const PLANS = {
     amount: 9700, // $97.00
     label: "$97/month",
     interval: "month" as const,
+    credits: 1000, // credits granted per billing period
   },
   yearly: {
     priceId: process.env.STRIPE_YEARLY_PRICE_ID ?? "price_1T0gxMFbe6nSVDckqE6KZrBF",
     amount: 49700, // $497.00
     label: "$497/year",
     interval: "year" as const,
+    credits: 12000, // credits granted per billing period (1000/month × 12)
   },
 } as const;
+
+// One-time credit top-up packs
+export const CREDIT_PACKS = {
+  starter: {
+    priceId: process.env.STRIPE_CREDITS_STARTER_PRICE_ID ?? "",
+    credits: 500,
+    amount: 900,   // $9.00
+    label: "500 credits",
+    price: "$9",
+  },
+  growth: {
+    priceId: process.env.STRIPE_CREDITS_GROWTH_PRICE_ID ?? "",
+    credits: 2000,
+    amount: 2900,  // $29.00
+    label: "2,000 credits",
+    price: "$29",
+    popular: true,
+  },
+  pro: {
+    priceId: process.env.STRIPE_CREDITS_PRO_PRICE_ID ?? "",
+    credits: 5000,
+    amount: 5900,  // $59.00
+    label: "5,000 credits",
+    price: "$59",
+  },
+} as const;
+
+export type CreditPackKey = keyof typeof CREDIT_PACKS;
 
 export async function createOrRetrieveCustomer(
   userId: string,

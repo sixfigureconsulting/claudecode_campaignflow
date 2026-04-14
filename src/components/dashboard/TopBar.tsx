@@ -17,6 +17,7 @@ import {
   Megaphone,
   CreditCard,
   Database,
+  Zap,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -32,9 +33,10 @@ interface TopBarProps {
   user: User;
   isTrialing: boolean;
   trialDaysLeft: number;
+  creditBalance: number;
 }
 
-export function TopBar({ user, isTrialing, trialDaysLeft }: TopBarProps) {
+export function TopBar({ user, isTrialing, trialDaysLeft, creditBalance }: TopBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -96,6 +98,21 @@ export function TopBar({ user, isTrialing, trialDaysLeft }: TopBarProps) {
 
         {/* Right side */}
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Credits badge */}
+          <Link
+            href="/billing"
+            className={cn(
+              "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors",
+              creditBalance <= 50
+                ? "border-amber-500/50 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                : "border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            )}
+            title="Credits balance — click to top up"
+          >
+            <Zap className="h-3 w-3 shrink-0" />
+            {creditBalance.toLocaleString()}
+          </Link>
+
           <Link href="/settings" className="hidden md:block">
             <Button variant="ghost" size="icon">
               <Settings className="h-4 w-4" />

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Shield, Trash2, ChevronDown, ChevronUp, Phone } from "lucide-react";
+import { CheckCircle2, Shield, Trash2, ChevronDown, ChevronUp, Phone, MessageCircle, AlertCircle } from "lucide-react";
 
 type ServiceConfig = { service: string; masked_key: string; updated_at: string };
 
@@ -359,10 +359,122 @@ function IntegrationCard({
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 
+// ── OAuth connection card ──────────────────────────────────────────────────────
+
+interface OAuthConnection {
+  platform: string;
+  platform_username?: string | null;
+}
+
+function OAuthCard({
+  platform,
+  label,
+  icon,
+  description,
+  connection,
+  connectUrl,
+  onDisconnect,
+}: {
+  platform: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+  connection?: OAuthConnection | null;
+  connectUrl: string;
+  onDisconnect: (platform: string) => void;
+}) {
+  const connected = !!connection;
+
+  return (
+    <div className="bg-white border rounded-2xl p-6 flex items-start gap-4">
+      <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-orange-500/10 text-orange-500 border border-orange-200 shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className="font-semibold text-sm">{label}</span>
+          {connected && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+              <CheckCircle2 className="h-2.5 w-2.5" />
+              {connection.platform_username ? `u/${connection.platform_username}` : "Connected"}
+            </span>
+          )}
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+            Social DM Outreach
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+      </div>
+      <div className="shrink-0">
+        {connected ? (
+          <button
+            onClick={() => onDisconnect(platform)}
+            className="text-xs text-muted-foreground hover:text-destructive transition-colors px-3 py-1.5 rounded-lg hover:bg-muted border border-border"
+          >
+            Disconnect
+          </button>
+        ) : (
+          <a
+            href={connectUrl}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          >
+            Connect →
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function GlobalIntegrationsForm({ existingConfigs }: { existingConfigs: ServiceConfig[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [saving, setSaving] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [oauthConnections, setOauthConnections] = useState<OAuthConnection[]>([]);
+  const [oauthMsg, setOauthMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Load OAuth connections
+  useEffect(() => {
+    fetch("/api/oauth/connections")
+      .then((r) => r.json())
+      .then((d) => setOauthConnections(d.connections ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Handle OAuth callback results
+  useEffect(() => {
+    const redditResult  = searchParams.get("reddit_oauth");
+    const twitterResult = searchParams.get("twitter_oauth");
+    const username = searchParams.get("username");
+
+    if (redditResult === "success") {
+      setOauthMsg({ type: "success", text: `Reddit connected${username ? ` as u/${username}` : ""}!` });
+      fetch("/api/oauth/connections")
+        .then((r) => r.json())
+        .then((d) => setOauthConnections(d.connections ?? []))
+        .catch(() => {});
+    } else if (redditResult === "denied") {
+      setOauthMsg({ type: "error", text: "Reddit connection cancelled." });
+    } else if (redditResult === "error") {
+      setOauthMsg({ type: "error", text: "Reddit connection failed. Please try again." });
+    } else if (twitterResult === "success") {
+      setOauthMsg({ type: "success", text: `Twitter/X connected${username ? ` as @${username}` : ""}!` });
+      fetch("/api/oauth/connections")
+        .then((r) => r.json())
+        .then((d) => setOauthConnections(d.connections ?? []))
+        .catch(() => {});
+    } else if (twitterResult === "denied") {
+      setOauthMsg({ type: "error", text: "Twitter/X connection cancelled." });
+    } else if (twitterResult === "error") {
+      setOauthMsg({ type: "error", text: "Twitter/X connection failed. Please try again." });
+    }
+  }, [searchParams]);
+
+  const handleDisconnectOAuth = async (platform: string) => {
+    await fetch(`/api/oauth/connections?platform=${platform}`, { method: "DELETE" });
+    setOauthConnections((prev) => prev.filter((c) => c.platform !== platform));
+  };
 
   const getExisting = (service: string) => existingConfigs.find((c) => c.service === service);
 
@@ -412,6 +524,44 @@ export function GlobalIntegrationsForm({ existingConfigs }: { existingConfigs: S
               deleting={deleting === id}
             />
           ))}
+        </div>
+      </div>
+
+      {/* ── Social OAuth connections ───────────────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-foreground">Social Accounts</h3>
+          <Badge variant="outline" className="text-xs">Social DM campaigns</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-1">
+          Connect social accounts to send DMs directly from CampaignFlow. Tokens are stored encrypted.
+        </p>
+        {oauthMsg && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${oauthMsg.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+            {oauthMsg.type === "success" ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+            {oauthMsg.text}
+          </div>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <OAuthCard
+            platform="reddit"
+            label="Reddit"
+            icon={<MessageCircle className="w-5 h-5" />}
+            description="Connect your Reddit account to send private messages to prospects directly from social campaigns."
+            connection={oauthConnections.find((c) => c.platform === "reddit")}
+            connectUrl="/api/oauth/reddit"
+            onDisconnect={handleDisconnectOAuth}
+          />
+          <OAuthCard
+            platform="twitter"
+            label="Twitter / X"
+            icon={<MessageCircle className="w-5 h-5" />}
+            description="Connect your Twitter/X account to send DMs to prospects from social campaigns."
+            connection={oauthConnections.find((c) => c.platform === "twitter")}
+            connectUrl="/api/oauth/twitter"
+            onDisconnect={handleDisconnectOAuth}
+          />
         </div>
       </div>
 

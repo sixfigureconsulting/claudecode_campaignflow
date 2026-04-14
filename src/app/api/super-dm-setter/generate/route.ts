@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { decryptApiKey } from "@/lib/encryption";
+import { requireCredits, deductCredits } from "@/lib/credits";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -157,6 +158,16 @@ export async function POST(request: NextRequest) {
     const userPrompt = buildUserPrompt(data);
     const hasImage = !!data.imageBase64;
 
+    // Credit check — screenshot=8, csv_lead=3, single=5
+    const creditAction = hasImage ? "super_dm_screenshot" : data.csvMode ? "super_dm_csv_lead" : "super_dm_single";
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, creditAction);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required}, have ${balance}. Top up in Billing.` },
+        { status: 402 }
+      );
+    }
+
     let result: Record<string, unknown>;
 
     if (data.provider === "openai") {
@@ -222,6 +233,7 @@ export async function POST(request: NextRequest) {
       result = JSON.parse(jsonMatch[0]);
     }
 
+    await deductCredits(supabase, user.id, creditAction);
     return NextResponse.json({ data: result }, { status: 200 });
   } catch (error) {
     console.error("Super DM Setter error:", error);

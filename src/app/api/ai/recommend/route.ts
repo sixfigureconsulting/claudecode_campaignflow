@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { requireCredits, deductCredits } from "@/lib/credits";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { decryptApiKey } from "@/lib/encryption";
 import { computeFunnelMetrics } from "@/lib/funnel";
@@ -23,6 +24,15 @@ export async function POST(request: NextRequest) {
     // Rate limit: 10 AI calls per user per minute
     const rl = rateLimit(`ai:${user.id}`, { limit: 10, windowMs: 60_000 });
     if (!rl.success) return rateLimitResponse(rl.resetAt);
+
+    // Credit check — 10 credits per AI recommendation
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "ai_recommend");
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required}, have ${balance}. Top up in Billing.` },
+        { status: 402 }
+      );
+    }
 
     // 3. Parse and validate request body
     const body = await request.json();
@@ -139,6 +149,7 @@ export async function POST(request: NextRequest) {
       console.error("Failed to save recommendation:", saveError);
     }
 
+    await deductCredits(supabase, user.id, "ai_recommend", 1, { report_id: reportId });
     return NextResponse.json({ data: saved ?? recommendation }, { status: 200 });
   } catch (error) {
     console.error("AI recommendation error:", error);

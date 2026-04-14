@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
+import { requireCredits, deductCredits } from "@/lib/credits";
 
 const MAX_ROWS = 50;
 const APOLLO_API_URL = "https://api.apollo.io/v1/organizations/search";
@@ -103,6 +104,15 @@ export async function POST(request: NextRequest) {
     const limited = rows.slice(0, MAX_ROWS);
     let enriched = 0;
 
+    // Credit check — 1 credit per row to enrich
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "apollo_enrich", limited.length);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required} (${limited.length} rows × 1), have ${balance}.` },
+        { status: 402 }
+      );
+    }
+
     // Log execution start
     const { data: execRow } = await supabase
       .from("executions")
@@ -140,6 +150,10 @@ export async function POST(request: NextRequest) {
           completed_at: new Date().toISOString(),
         })
         .eq("id", execId);
+    }
+
+    if (enriched > 0) {
+      await deductCredits(supabase, user.id, "apollo_enrich", enriched, { project_id: projectId });
     }
 
     // Return enriched CSV

@@ -4,6 +4,7 @@ import { decryptApiKey } from "@/lib/encryption";
 import { generateSequencesSchema } from "@/lib/validations";
 import type { InfluenceType } from "@/lib/validations";
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { requireCredits, deductCredits } from "@/lib/credits";
 
 async function verifyOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -174,6 +175,15 @@ export async function POST(request: NextRequest) {
     if (!owned)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    // Credit check — 3 credits per lead sequence generated
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "generate_sequence", leads.length);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required} (${leads.length} leads × 3), have ${balance}.` },
+        { status: 402 }
+      );
+    }
+
     // Get OpenAI API key
     const { data: keyRow } = await supabase
       .from("integration_configs")
@@ -213,6 +223,9 @@ export async function POST(request: NextRequest) {
       completed_at: new Date().toISOString(),
     });
 
+    if (successCount > 0) {
+      await deductCredits(supabase, user.id, "generate_sequence", successCount, { project_id: projectId });
+    }
     return NextResponse.json({
       leads: results,
       summary: `${successCount} of ${leads.length} sequences generated`,

@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   ArrowDown,
   Flame,
+  Rocket,
 } from "lucide-react";
+import { CampaignWizard } from "@/components/social/CampaignWizard";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -572,6 +574,7 @@ function CsvResults({ results, onRegenerate }: { results: CsvResult[]; onRegener
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function SuperDMSetterClient({ configuredProviders = [] }: { configuredProviders?: string[] }) {
+  const [mode, setMode] = useState<"ai" | "campaign">("ai");
   const [industry, setIndustry] = useState<Industry>("high_ticket");
   const [channel, setChannel] = useState<Channel>("linkedin");
   const [messageType, setMessageType] = useState<MessageType>("opener");
@@ -639,39 +642,75 @@ export function SuperDMSetterClient({ configuredProviders = [] }: { configuredPr
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      <AgentConfigStep industry={industry} setIndustry={setIndustry} channel={channel} setChannel={setChannel} messageType={messageType} setMessageType={setMessageType} tone={tone} setTone={setTone} provider={provider} setProvider={setProvider} onConfirm={() => setAgentConfigured(true)} configured={agentConfigured} onEdit={() => setAgentConfigured(false)} configuredProviders={configuredProviders} />
-
-      {agentConfigured && (
-        <div className="flex justify-center py-1">
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-px h-5 bg-gradient-to-b from-violet-500/40 to-indigo-500/20" />
-            <ArrowDown className="w-3.5 h-3.5 text-indigo-500/40" />
-          </div>
-        </div>
-      )}
-
-      <InputStep enabled={agentConfigured} inputMode={inputMode} setInputMode={setInputMode} conversation={conversation} setConversation={setConversation} screenshot={screenshot} setScreenshot={setScreenshot} csvLeads={csvLeads} setCsvLeads={setCsvLeads} loading={loading} onGenerate={generate} onGenerateCsv={generateCsv} />
-
-      {error && (
-        <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-red-300/80">{error}</p>
-        </div>
-      )}
-
-      {hasResults && (
-        <div className="flex justify-center py-1">
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-px h-5 bg-gradient-to-b from-indigo-500/20 to-white/5" />
-            <ArrowDown className="w-3.5 h-3.5 text-white/15" />
-          </div>
-        </div>
-      )}
-
-      <div ref={resultsRef}>
-        {result && <SingleResults result={result} channel={channel} onRegenerate={generate} />}
-        {csvResults.length > 0 && <CsvResults results={csvResults} onRegenerate={generateCsv} />}
+      {/* ── Mode toggle ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.08] rounded-xl p-1">
+        <button
+          onClick={() => setMode("ai")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all",
+            mode === "ai"
+              ? "bg-violet-500/20 border border-violet-400/30 text-violet-300"
+              : "text-white/30 hover:text-white/50"
+          )}
+        >
+          <Sparkles className="w-3.5 h-3.5" /> AI Writing
+        </button>
+        <button
+          onClick={() => setMode("campaign")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all",
+            mode === "campaign"
+              ? "bg-indigo-500/20 border border-indigo-400/30 text-indigo-300"
+              : "text-white/30 hover:text-white/50"
+          )}
+        >
+          <Rocket className="w-3.5 h-3.5" /> Launch Campaign
+        </button>
       </div>
+
+      {/* ── Campaign mode ─────────────────────────────────────────────────── */}
+      {mode === "campaign" && (
+        <CampaignWizard onClose={() => setMode("ai")} />
+      )}
+
+      {/* ── AI Writing mode ───────────────────────────────────────────────── */}
+      {mode === "ai" && (
+        <>
+          <AgentConfigStep industry={industry} setIndustry={setIndustry} channel={channel} setChannel={setChannel} messageType={messageType} setMessageType={setMessageType} tone={tone} setTone={setTone} provider={provider} setProvider={setProvider} onConfirm={() => setAgentConfigured(true)} configured={agentConfigured} onEdit={() => setAgentConfigured(false)} configuredProviders={configuredProviders} />
+
+          {agentConfigured && (
+            <div className="flex justify-center py-1">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-px h-5 bg-gradient-to-b from-violet-500/40 to-indigo-500/20" />
+                <ArrowDown className="w-3.5 h-3.5 text-indigo-500/40" />
+              </div>
+            </div>
+          )}
+
+          <InputStep enabled={agentConfigured} inputMode={inputMode} setInputMode={setInputMode} conversation={conversation} setConversation={setConversation} screenshot={screenshot} setScreenshot={setScreenshot} csvLeads={csvLeads} setCsvLeads={setCsvLeads} loading={loading} onGenerate={generate} onGenerateCsv={generateCsv} />
+
+          {error && (
+            <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-red-300/80">{error}</p>
+            </div>
+          )}
+
+          {hasResults && (
+            <div className="flex justify-center py-1">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-px h-5 bg-gradient-to-b from-indigo-500/20 to-white/5" />
+                <ArrowDown className="w-3.5 h-3.5 text-white/15" />
+              </div>
+            </div>
+          )}
+
+          <div ref={resultsRef}>
+            {result && <SingleResults result={result} channel={channel} onRegenerate={generate} />}
+            {csvResults.length > 0 && <CsvResults results={csvResults} onRegenerate={generateCsv} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }

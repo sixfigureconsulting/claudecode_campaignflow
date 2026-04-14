@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
 import { checkExclusionsSchema } from "@/lib/validations";
+import { requireCredits, deductCredits } from "@/lib/credits";
 
 async function verifyOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -123,6 +124,15 @@ export async function POST(request: NextRequest) {
     if (!owned)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    // Credit check — 1 credit per lead checked
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "check_exclusions", leads.length);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required} (${leads.length} leads × 1), have ${balance}.` },
+        { status: 402 }
+      );
+    }
+
     // Fetch available integration keys
     const { data: configs } = await supabase
       .from("integration_configs")
@@ -162,6 +172,7 @@ export async function POST(request: NextRequest) {
     if (instantlyKey) sources.push("Instantly");
     if (hubspotKey) sources.push("HubSpot");
 
+    await deductCredits(supabase, user.id, "check_exclusions", leads.length, { project_id: projectId });
     return NextResponse.json({
       leads: checkedLeads,
       summary:

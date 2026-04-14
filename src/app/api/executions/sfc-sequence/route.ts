@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import Papa from "papaparse";
 import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
+import { requireCredits, deductCredits } from "@/lib/credits";
 
 export const maxDuration = 60;
 
@@ -266,6 +267,15 @@ export async function POST(request: NextRequest) {
     const limited = rows.slice(0, MAX_LEADS);
     const results = [];
 
+    // Credit check — 15 credits per lead sequence
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "sfc_sequence", limited.length);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required} (${limited.length} leads × 15), have ${balance}.` },
+        { status: 402 }
+      );
+    }
+
     // Log execution start
     const { data: execRow } = await supabase
       .from("executions")
@@ -330,6 +340,9 @@ export async function POST(request: NextRequest) {
         .eq("id", execId);
     }
 
+    if (generated > 0) {
+      await deductCredits(supabase, user.id, "sfc_sequence", generated, { project_id: projectId });
+    }
     return NextResponse.json({ success: true, summary: parts.join(", "), results });
   } catch (error) {
     console.error("SFC sequence error:", error);

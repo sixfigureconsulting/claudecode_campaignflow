@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
 import { qualifyLeadsSchema } from "@/lib/validations";
+import { requireCredits, deductCredits } from "@/lib/credits";
 
 async function verifyOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -40,6 +41,15 @@ export async function POST(request: NextRequest) {
     const owned = await verifyOwnership(supabase, projectId, user.id);
     if (!owned)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // Credit check — 2 credits per lead qualified
+    const { allowed, balance, required } = await requireCredits(supabase, user.id, "qualify_lead", leads.length);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Insufficient credits. Need ${required} (${leads.length} leads × 2), have ${balance}.` },
+        { status: 402 }
+      );
+    }
 
     // Get OpenAI API key
     const { data: keyRow } = await supabase
@@ -138,6 +148,7 @@ Return JSON array only.`;
 
     const qualifiedCount = qualifiedLeads.filter((l) => l.qualified).length;
 
+    await deductCredits(supabase, user.id, "qualify_lead", leads.length, { project_id: projectId });
     return NextResponse.json({
       leads: qualifiedLeads,
       summary: `${qualifiedCount} of ${leads.length} leads qualify against your ICP`,

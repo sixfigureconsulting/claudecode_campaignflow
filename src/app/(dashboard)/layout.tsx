@@ -15,12 +15,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Fetch subscription status for banner
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("status, trial_ends_at")
-    .eq("user_id", user.id)
-    .single();
+  // Fetch subscription status for banner + credit balance
+  const [{ data: subscription }, { data: creditsRow }] = await Promise.all([
+    supabase.from("subscriptions").select("status, trial_ends_at").eq("user_id", user.id).single(),
+    supabase.from("user_credits").select("balance").eq("user_id", user.id).single(),
+  ]);
 
   const isTrialing = subscription?.status === "trialing";
   const trialDaysLeft = subscription?.trial_ends_at
@@ -32,6 +31,7 @@ export default async function DashboardLayout({
         )
       )
     : 0;
+  const creditBalance: number = creditsRow?.balance ?? 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -41,6 +41,7 @@ export default async function DashboardLayout({
           user={user}
           isTrialing={isTrialing}
           trialDaysLeft={trialDaysLeft}
+          creditBalance={creditBalance}
         />
         <main className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
           <div className="p-6">
