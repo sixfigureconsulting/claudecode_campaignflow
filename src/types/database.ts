@@ -187,6 +187,80 @@ export interface FunnelMetrics {
   revenuePerLead: number;
 }
 
+// ── Inbox ─────────────────────────────────────────────────────────────────────
+
+export type InboxProvider = "gmail" | "linkedin" | "manychat" | "form";
+export type InboxClassification = "prospect" | "not_prospect" | "warmup" | "unclassified";
+export type MessageDirection = "inbound" | "outbound";
+
+export interface InboxAccount {
+  id: string;
+  user_id: string;
+  provider: InboxProvider;
+  account_label: string;
+  email: string | null;
+  extra_config: Record<string, string> | null;
+  is_active: boolean;
+  last_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InboxConversation {
+  id: string;
+  user_id: string;
+  account_id: string;
+  external_thread_id: string | null;
+  subject: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_linkedin_url: string | null;
+  contact_company: string | null;
+  classification: InboxClassification;
+  classification_reason: string | null;
+  classification_score: number | null;
+  is_read: boolean;
+  is_archived: boolean;
+  is_blocked: boolean;
+  last_message_at: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InboxMessage {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  external_message_id: string | null;
+  direction: MessageDirection;
+  sender_name: string | null;
+  sender_email: string | null;
+  body: string;
+  body_html: string | null;
+  sent_at: string;
+  created_at: string;
+}
+
+export interface InboxSettings {
+  id: string;
+  user_id: string;
+  icp_description: string;
+  sales_keywords: string[];
+  blocked_senders: string[];
+  block_warmup_tools: boolean;
+  auto_classify: boolean;
+  ai_provider: "anthropic" | "openai";
+  created_at: string;
+  updated_at: string;
+}
+
+// Joined types for UI
+export interface InboxConversationWithMessages extends InboxConversation {
+  inbox_messages: InboxMessage[];
+  inbox_accounts: Pick<InboxAccount, "provider" | "account_label" | "email">;
+}
+
 // Dashboard aggregated stats
 export interface DashboardStats {
   totalClients: number;

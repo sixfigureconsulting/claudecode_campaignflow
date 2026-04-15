@@ -12,6 +12,7 @@ import {
   Database,
   FileBarChart2,
   Zap,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,12 @@ const navItems = [
     label: "Super DM Setter",
     icon: Zap,
     badge: "NEW",
+  },
+  {
+    href: "/inbox",
+    label: "Inbox",
+    icon: Inbox,
+    badge: null,
   },
   {
     href: "/billing",
