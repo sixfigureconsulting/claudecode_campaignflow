@@ -7,7 +7,7 @@ import { createServiceClient } from "@/lib/supabase/server";
  * and dispatches per-provider sync calls.
  *
  * Protected by CRON_SECRET env var.
- * vercel.json schedule: every 20 minutes — see vercel.json
+ * vercel.json schedule: daily at 08:00 UTC (Vercel Hobby plan — one run per day max)
  */
 
 export const runtime = "nodejs";

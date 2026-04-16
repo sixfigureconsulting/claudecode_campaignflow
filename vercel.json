@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/sync-inbox",
-      "schedule": "*/20 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
