@@ -296,12 +296,14 @@ function AgentConfigStep({ industry, setIndustry, channel, setChannel, messageTy
 
 // ─── Step 2: Input ────────────────────────────────────────────────────────────
 
-function InputStep({ enabled, inputMode, setInputMode, conversation, setConversation, screenshot, setScreenshot, csvLeads, setCsvLeads, loading, onGenerate, onGenerateCsv }: {
+function InputStep({ enabled, inputMode, setInputMode, conversation, setConversation, screenshot, setScreenshot, csvLeads, setCsvLeads, loading, onGenerate, onGenerateCsv, prospectName, setProspectName, contextNotes, setContextNotes }: {
   enabled: boolean; inputMode: InputMode; setInputMode: (v: InputMode) => void;
   conversation: string; setConversation: (v: string) => void;
   screenshot: File | null; setScreenshot: (f: File | null) => void;
   csvLeads: CsvLead[]; setCsvLeads: (l: CsvLead[]) => void;
   loading: boolean; onGenerate: () => void; onGenerateCsv: () => void;
+  prospectName: string; setProspectName: (v: string) => void;
+  contextNotes: string; setContextNotes: (v: string) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
@@ -447,6 +449,38 @@ function InputStep({ enabled, inputMode, setInputMode, conversation, setConversa
           </div>
         )}
 
+        {/* Prospect Name + Context (single-conv and screenshot modes only) */}
+        {inputMode !== "csv" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold tracking-widest uppercase text-white/30">
+                Prospect Name <span className="text-white/20 normal-case tracking-normal font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={prospectName}
+                onChange={(e) => setProspectName(e.target.value)}
+                maxLength={100}
+                placeholder="e.g. Sarah Johnson"
+                className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white/80 placeholder:text-white/15 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500/40 transition-colors hover:bg-white/[0.06]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold tracking-widest uppercase text-white/30">
+                Context Notes <span className="text-white/20 normal-case tracking-normal font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={contextNotes}
+                onChange={(e) => setContextNotes(e.target.value)}
+                maxLength={300}
+                placeholder="e.g. CEO at 8-figure agency, replied twice"
+                className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white/80 placeholder:text-white/15 focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500/40 transition-colors hover:bg-white/[0.06]"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Generate */}
         <button onClick={inputMode === "csv" ? onGenerateCsv : onGenerate} disabled={loading || !canGenerate}
           className={cn("w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-xl font-bold text-sm transition-all duration-200",
@@ -583,6 +617,8 @@ export function SuperDMSetterClient({ configuredProviders = [] }: { configuredPr
   const [agentConfigured, setAgentConfigured] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>("paste");
   const [conversation, setConversation] = useState("");
+  const [prospectName, setProspectName] = useState("");
+  const [contextNotes, setContextNotes] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [csvLeads, setCsvLeads] = useState<CsvLead[]>([]);
   const [result, setResult] = useState<DMResult | null>(null);
@@ -604,6 +640,8 @@ export function SuperDMSetterClient({ configuredProviders = [] }: { configuredPr
     setLoading(true); setError(null); setResult(null);
     try {
       const body: Record<string, unknown> = { industry, channel, messageType, tone, provider };
+      if (prospectName.trim()) body.prospectName = prospectName.trim();
+      if (contextNotes.trim()) body.contextNotes = contextNotes.trim();
       if (inputMode === "paste") { body.conversation = conversation.trim(); }
       else if (inputMode === "screenshot" && screenshot) {
         const { base64, mimeType } = await getImageBase64(screenshot);
@@ -687,7 +725,7 @@ export function SuperDMSetterClient({ configuredProviders = [] }: { configuredPr
             </div>
           )}
 
-          <InputStep enabled={agentConfigured} inputMode={inputMode} setInputMode={setInputMode} conversation={conversation} setConversation={setConversation} screenshot={screenshot} setScreenshot={setScreenshot} csvLeads={csvLeads} setCsvLeads={setCsvLeads} loading={loading} onGenerate={generate} onGenerateCsv={generateCsv} />
+          <InputStep enabled={agentConfigured} inputMode={inputMode} setInputMode={setInputMode} conversation={conversation} setConversation={setConversation} screenshot={screenshot} setScreenshot={setScreenshot} csvLeads={csvLeads} setCsvLeads={setCsvLeads} loading={loading} onGenerate={generate} onGenerateCsv={generateCsv} prospectName={prospectName} setProspectName={setProspectName} contextNotes={contextNotes} setContextNotes={setContextNotes} />
 
           {error && (
             <div className="flex items-start gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
