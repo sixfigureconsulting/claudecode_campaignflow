@@ -18,6 +18,8 @@ export const CREDIT_COSTS = {
   super_dm_screenshot:  8,    // Super DM Setter — screenshot analysis (Vision AI)
   super_dm_csv_lead:    3,    // Super DM Setter — CSV batch, per lead
   social_dm_send:       1,    // per DM sent via social campaign
+  super_agent_session:  50,   // flat fee per Super Agent run
+  super_agent_tool_call: 5,   // per tool call executed by the agent
 } as const;
 
 export type CreditAction = keyof typeof CREDIT_COSTS;

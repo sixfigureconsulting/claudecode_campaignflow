@@ -8,6 +8,7 @@ import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingFAQ } from "@/components/landing/LandingFAQ";
 import { LandingCTA } from "@/components/landing/LandingCTA";
 import { LandingNav } from "@/components/landing/LandingNav";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export const metadata: Metadata = {
   title: "CampaignFlow Pro — Stop Guessing. Start Growing.",
@@ -27,6 +28,7 @@ export default function LandingPage() {
       <LandingPricing />
       <LandingFAQ />
       <LandingCTA />
+      <LandingFooter />
     </div>
   );
 }

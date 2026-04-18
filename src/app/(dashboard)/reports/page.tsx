@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { NewStandaloneReportDialog } from "@/components/reports/NewStandaloneReportDialog";
 import { ReportsListClient } from "@/components/reports/ReportsListClient";
+import { SocialCampaignStatsTable } from "@/components/reports/SocialCampaignStatsTable";
 import { FileBarChart2 } from "lucide-react";
 
 export const metadata: Metadata = { title: "Reports" };
@@ -42,6 +43,12 @@ export default async function ReportsPage() {
   // Sort by date descending
   reports.sort((a, b) => new Date(b.report_date).getTime() - new Date(a.report_date).getTime());
 
+  const { data: socialCampaigns } = await supabase
+    .from("social_campaigns")
+    .select("id, name, channel, status, total_leads, sent_count, reply_count, failed_count, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -53,6 +60,8 @@ export default async function ReportsPage() {
         </div>
         <NewStandaloneReportDialog />
       </div>
+
+      <SocialCampaignStatsTable campaigns={socialCampaigns ?? []} />
 
       {reports.length === 0 ? (
         <div className="border-2 border-dashed border-border rounded-xl py-16 text-center">

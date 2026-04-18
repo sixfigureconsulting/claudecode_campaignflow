@@ -5,7 +5,7 @@ import {
   Mail, Linkedin, MessageCircle, Globe, Inbox, Search, RefreshCw,
   Archive, Ban, MoreVertical, Send, Sparkles, CheckCircle2,
   AlertCircle, Clock, Filter, Settings2, Trash2, ChevronDown,
-  User, Building2, AtSign, ExternalLink, Loader2,
+  User, Building2, AtSign, ExternalLink, Loader2, Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +108,12 @@ export function InboxClient({ initialAccounts, initialSettings, appUrl }: Props)
   const [replySending, setReplySending]     = useState(false);
   const [replyError, setReplyError]         = useState("");
   const [classifying, setClassifying]       = useState(false);
+
+  // 24-hour follow-up state
+  const [showFollowUp, setShowFollowUp]     = useState(false);
+  const [followUpMsg, setFollowUpMsg]       = useState("");
+  const [followUpDelay, setFollowUpDelay]   = useState("60");
+  const [followUpSending, setFollowUpSending] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -243,6 +249,31 @@ export function InboxClient({ initialAccounts, initialSettings, appUrl }: Props)
       setReplyError("Network error");
     } finally {
       setReplySending(false);
+    }
+  }
+
+  // ── Instagram 24-hr follow-up ────────────────────────────────────────────
+
+  async function sendFollowUp() {
+    if (!selected || !followUpMsg.trim()) return;
+    setFollowUpSending(true);
+    try {
+      const res = await fetch(`/api/inbox/conversations/${selected.id}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "send", body: followUpMsg.trim(), delay_minutes: parseInt(followUpDelay, 10) }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setFollowUpMsg("");
+        setShowFollowUp(false);
+      } else {
+        setReplyError(json.error ?? "Follow-up failed");
+      }
+    } catch {
+      setReplyError("Network error");
+    } finally {
+      setFollowUpSending(false);
     }
   }
 
@@ -609,18 +640,31 @@ export function InboxClient({ initialAccounts, initialSettings, appUrl }: Props)
                 )}
 
                 <div className="flex items-center justify-between mt-2.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1.5 border-brand-700 hover:bg-brand-800"
-                    onClick={draftWithAI}
-                    disabled={aiDrafting}
-                  >
-                    {aiDrafting
-                      ? <><Loader2 className="w-3 h-3 animate-spin" />Drafting…</>
-                      : <><Sparkles className="w-3 h-3" />AI Assist</>
-                    }
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5 border-brand-700 hover:bg-brand-800"
+                      onClick={draftWithAI}
+                      disabled={aiDrafting}
+                    >
+                      {aiDrafting
+                        ? <><Loader2 className="w-3 h-3 animate-spin" />Drafting…</>
+                        : <><Sparkles className="w-3 h-3" />AI Assist</>
+                      }
+                    </Button>
+                    {/* 24-hr follow-up button — shown for ManyChat/Instagram convos */}
+                    {selected?.inbox_accounts?.provider === "manychat" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5 border-brand-700 hover:bg-brand-800 text-purple-400 border-purple-700/50"
+                        onClick={() => setShowFollowUp((v) => !v)}
+                      >
+                        <Timer className="w-3 h-3" />24h Follow-up
+                      </Button>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-brand-600">⌘↵ to send</span>
@@ -635,6 +679,47 @@ export function InboxClient({ initialAccounts, initialSettings, appUrl }: Props)
                     </Button>
                   </div>
                 </div>
+
+                {/* 24-hour follow-up inline panel */}
+                {showFollowUp && (
+                  <div className="mt-3 p-3 bg-purple-950/40 border border-purple-700/30 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                        <Timer className="w-3 h-3" /> Schedule follow-up within 24-hour window
+                      </p>
+                      <button onClick={() => setShowFollowUp(false)} className="text-brand-500 hover:text-white">
+                        <span className="text-xs">✕</span>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-purple-400/70">
+                      Sends a follow-up DM via ManyChat within the active 24-hour messaging window.
+                    </p>
+                    <textarea
+                      value={followUpMsg}
+                      onChange={(e) => setFollowUpMsg(e.target.value)}
+                      placeholder="Follow-up message…"
+                      rows={2}
+                      className="w-full bg-brand-900 border border-purple-700/30 rounded-lg text-sm text-white placeholder:text-brand-500 px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] text-purple-400">Send after</label>
+                      <select value={followUpDelay} onChange={(e) => setFollowUpDelay(e.target.value)}
+                        className="bg-brand-900 border border-purple-700/30 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
+                        <option value="0">immediately</option>
+                        <option value="30">30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="120">2 hours</option>
+                        <option value="360">6 hours</option>
+                        <option value="720">12 hours</option>
+                      </select>
+                      <Button size="sm" className="h-7 text-xs ml-auto gap-1.5 bg-purple-600 hover:bg-purple-500 text-white"
+                        onClick={sendFollowUp} disabled={followUpSending || !followUpMsg.trim()}>
+                        {followUpSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                        Schedule
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
