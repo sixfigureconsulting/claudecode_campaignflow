@@ -287,7 +287,8 @@ export async function POST(request: NextRequest) {
       const recordIds: string[] = [];
       let membAfter: string | null = null;
       do {
-        const url = `https://api.hubapi.com/crm/v3/lists/${encodeURIComponent(listId)}/memberships?limit=100${membAfter ? `&after=${membAfter}` : ""}`;
+        const afterParam = membAfter ? `&after=${membAfter}` : "";
+        const url = `https://api.hubapi.com/crm/v3/lists/${encodeURIComponent(listId)}/memberships?limit=100${afterParam}`;
         const membRes = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
         if (!membRes.ok) {
           const err = await membRes.json().catch(() => ({}));
