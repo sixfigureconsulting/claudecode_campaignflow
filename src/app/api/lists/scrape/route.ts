@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
         } catch { /* not JSON */ }
       }
       if (records.length === 0 && agentData.s3Folder) {
-        const s3Res = await fetch(`https://cache1.phantombooster.com/${agentData.s3Folder}/result.json`, {
+        const s3Res = await fetch(`https://cache.phantombuster.com/${agentData.s3Folder}/result.json`, {
           headers: { "X-Phantombuster-Key": apiKey },
         });
         if (s3Res.ok) records = await s3Res.json().catch(() => []);
@@ -284,26 +284,37 @@ export async function POST(request: NextRequest) {
       if (!apiKey) return NextResponse.json({ error: "HubSpot API key not configured. Add it in Settings → Integrations." }, { status: 400 });
 
       const listId = inputValue.trim();
-      const membRes = await fetch(`https://api.hubapi.com/crm/v3/lists/${encodeURIComponent(listId)}/memberships?limit=100`, { headers: { Authorization: `Bearer ${apiKey}` } });
-      if (!membRes.ok) {
-        const err = await membRes.json().catch(() => ({}));
-        return NextResponse.json({ error: `HubSpot list error: ${err.message ?? membRes.statusText}. Check your list ID.` }, { status: 502 });
-      }
-      const membData = await membRes.json();
-      const recordIds: string[] = (membData.results ?? []).map((r: Record<string, string>) => r.recordId);
+      const recordIds: string[] = [];
+      let membAfter: string | null = null;
+      do {
+        const url = `https://api.hubapi.com/crm/v3/lists/${encodeURIComponent(listId)}/memberships?limit=100${membAfter ? `&after=${membAfter}` : ""}`;
+        const membRes = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+        if (!membRes.ok) {
+          const err = await membRes.json().catch(() => ({}));
+          return NextResponse.json({ error: `HubSpot list error: ${err.message ?? membRes.statusText}. Check your list ID.` }, { status: 502 });
+        }
+        const membData = await membRes.json();
+        for (const r of membData.results ?? []) recordIds.push((r as Record<string, string>).recordId);
+        membAfter = membData.paging?.next?.after ?? null;
+        if (recordIds.length >= 500) break;
+      } while (membAfter);
       if (recordIds.length === 0) return NextResponse.json({ leads: [], total: 0 });
 
-      const batchRes = await fetch("https://api.hubapi.com/crm/v3/objects/contacts/batch/read", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ inputs: recordIds.slice(0, 100).map((id) => ({ id })), properties: ["firstname", "lastname", "email", "company", "jobtitle", "hs_linkedin_url", "website", "phone"] }),
-      });
-      if (!batchRes.ok) return NextResponse.json({ error: "Failed to fetch HubSpot contact details." }, { status: 502 });
-      const batchData = await batchRes.json();
-      const leads: CampaignLead[] = (batchData.results ?? []).map((r: Record<string, Record<string, string>>) => {
-        const p = r.properties ?? {};
-        return { first_name: p.firstname ?? "", last_name: p.lastname ?? "", email: p.email ?? "", company: p.company ?? "", title: p.jobtitle ?? "", linkedin_url: p.hs_linkedin_url ?? null, website: p.website ?? null, phone: p.phone ?? null };
-      }).filter((l: CampaignLead) => l.email?.includes("@"));
+      const leads: CampaignLead[] = [];
+      for (let i = 0; i < recordIds.length; i += 100) {
+        const chunk = recordIds.slice(i, i + 100);
+        const batchRes = await fetch("https://api.hubapi.com/crm/v3/objects/contacts/batch/read", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ inputs: chunk.map((id) => ({ id })), properties: ["firstname", "lastname", "email", "company", "jobtitle", "hs_linkedin_url", "website", "phone"] }),
+        });
+        if (!batchRes.ok) return NextResponse.json({ error: "Failed to fetch HubSpot contact details." }, { status: 502 });
+        const batchData = await batchRes.json();
+        for (const r of batchData.results ?? []) {
+          const p = (r as Record<string, Record<string, string>>).properties ?? {};
+          if (p.email?.includes("@")) leads.push({ first_name: p.firstname ?? "", last_name: p.lastname ?? "", email: p.email ?? "", company: p.company ?? "", title: p.jobtitle ?? "", linkedin_url: p.hs_linkedin_url ?? null, website: p.website ?? null, phone: p.phone ?? null });
+        }
+      }
       return NextResponse.json({ leads, total: leads.length });
     }
 
