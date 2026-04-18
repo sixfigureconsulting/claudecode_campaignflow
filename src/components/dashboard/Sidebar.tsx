@@ -14,6 +14,7 @@ import {
   Zap,
   Inbox,
   MessageSquare,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +45,16 @@ const navItems = [
     badge: null,
   },
   {
+    href: "/super-agent",
+    label: "Super Agent",
+    icon: Bot,
+    badge: "NEW",
+  },
+  {
     href: "/super-dm-setter",
     label: "Super DM Setter",
     icon: Zap,
-    badge: "NEW",
+    badge: null,
   },
   {
     href: "/inbox",

@@ -261,6 +261,88 @@ export interface InboxConversationWithMessages extends InboxConversation {
   inbox_accounts: Pick<InboxAccount, "provider" | "account_label" | "email">;
 }
 
+// ── Super AI Agent ───────────────────────────────────────────────────────────
+
+export type SuperAgentStatus = "running" | "awaiting_approval" | "approved" | "launched" | "failed";
+
+export interface SuperAgentSession {
+  id: string;
+  user_id: string;
+  offer: string;
+  icp: string;
+  goals: string;
+  channels: string[];
+  status: SuperAgentStatus;
+  outreach_plan: OutreachPlan | null;
+  created_list_ids: string[];
+  created_campaign_ids: string[];
+  created_automation_ids: string[];
+  input_tokens: number;
+  output_tokens: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AgentMessageDisplayType =
+  | "user_message"
+  | "agent_thinking"
+  | "tool_start"
+  | "tool_result"
+  | "agent_text"
+  | "plan_ready";
+
+export interface SuperAgentMessage {
+  id: string;
+  session_id: string;
+  user_id: string;
+  role: "user" | "assistant" | "tool_result";
+  content: unknown[];  // raw Anthropic ContentBlock[]
+  display_type: AgentMessageDisplayType | null;
+  display_data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface OutreachPlan {
+  summary: string;
+  icp_analysis: {
+    titles: string[];
+    company_types: string[];
+    company_sizes: string[];
+    pain_points: string[];
+    best_channels: string[];
+  };
+  campaigns: OutreachPlanCampaign[];
+  automations: OutreachPlanAutomation[];
+  what_was_done: string[];
+  total_leads: number;
+}
+
+export interface OutreachPlanCampaign {
+  id: string;
+  name: string;
+  channel: string;
+  list_id: string;
+  lead_count: number;
+  sequence_preview: string[];
+}
+
+export interface OutreachPlanAutomation {
+  id: string;
+  name: string;
+  platform: string;
+  keyword: string;
+  reply_dm: string;
+}
+
+// UI display types for the agent chat
+export type AgentUIMessage =
+  | { type: "user"; text: string }
+  | { type: "agent_thinking"; text: string }
+  | { type: "tool_start"; callId: string; name: string; label: string; inputSummary: string }
+  | { type: "tool_result"; callId: string; name: string; label: string; success: boolean; resultSummary: string; leadCount?: number }
+  | { type: "agent_text"; text: string }
+  | { type: "plan_ready"; plan: OutreachPlan };
+
 // Dashboard aggregated stats
 export interface DashboardStats {
   totalClients: number;
