@@ -1,104 +1,76 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Check, Zap } from "lucide-react";
+import { Check } from "lucide-react";
 
 const FEATURES = [
-  "Unlimited campaigns & reports",
-  "CSV lead list import with auto-mapping",
-  "Outbound funnel tracking (Sent → Opens → Replies → Meetings)",
-  "AI sequence recommendations (OpenAI or Claude)",
-  "Visual performance dashboard & charts",
-  "Week-over-week comparison",
-  "PDF export of AI reports",
-  "Bring your own API key (AES-256 encrypted)",
-  "Priority support",
+  "Unlimited campaigns & clients",
+  "AI reports with your OpenAI/Claude key",
+  "Unified inbox across 5 channels",
+  "Super DM Setter generator",
+  "All import formats (Apollo, Instantly, HeyReach, CSV)",
+  "Priority email support",
 ];
 
 export function LandingPricing() {
   return (
-    <section id="pricing" className="py-20 px-4 bg-gray-50">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <p className="text-brand-600 text-sm font-semibold tracking-wide uppercase mb-3">Pricing</p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            Simple, transparent pricing
+    <section id="pricing" className="py-24 px-4 bg-gray-50">
+      <div className="max-w-[1000px] mx-auto">
+        <div className="text-center mb-14">
+          <p className="text-brand-600 text-sm font-semibold tracking-[0.1em] uppercase mb-3">Pricing</p>
+          <h2 className="text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
+            One plan. Everything included.
           </h2>
-          <p className="text-gray-600 text-lg max-w-xl mx-auto">
-            Start free for 7 days. No credit card required. Cancel anytime.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {/* Free trial */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <p className="font-semibold text-gray-900 mb-1">Free Trial</p>
-            <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-4xl font-bold">$0</span>
-              <span className="text-gray-500 text-sm">/ 7 days</span>
-            </div>
-            <ul className="space-y-2 mb-6 text-sm">
-              <li className="flex items-center gap-2 text-gray-600">
-                <Check className="h-4 w-4 text-green-500" />
-                All features unlocked
-              </li>
-              <li className="flex items-center gap-2 text-gray-600">
-                <Check className="h-4 w-4 text-green-500" />
-                No credit card
-              </li>
-            </ul>
-            <Link href="/signup">
-              <Button variant="outline" className="w-full">Start Free Trial</Button>
-            </Link>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-[780px] mx-auto">
           {/* Monthly */}
-          <div className="bg-white rounded-2xl border-2 border-brand-400 p-6">
-            <p className="font-semibold text-gray-900 mb-1">Monthly</p>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-[30px]">
+            <p className="text-sm font-semibold text-gray-500 mb-1.5">Monthly</p>
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-4xl font-bold">$97</span>
-              <span className="text-gray-500 text-sm">/ month</span>
+              <span className="text-[46px] font-bold tracking-tight tabular-nums">$97</span>
+              <span className="text-gray-500 text-sm">/month</span>
             </div>
-            <ul className="space-y-2 mb-6 text-sm">
-              {FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-gray-600">
-                  <Check className="h-4 w-4 text-green-500 shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
             <Link href="/signup">
-              <Button className="w-full">Get Started</Button>
+              <Button variant="outline" className="w-full mb-5">Start Free Trial</Button>
             </Link>
+            <PricingFeatureList />
           </div>
 
-          {/* Yearly */}
-          <div className="bg-brand-950 rounded-2xl border-2 border-brand-600 p-6 relative">
-            <div className="absolute -top-3 right-4">
-              <span className="bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                <Zap className="h-3 w-3" />
-                Save $667
-              </span>
+          {/* Annual — best value */}
+          <div
+            className="bg-white rounded-2xl shadow-[0_20px_40px_-10px_rgba(100,112,241,0.2)] p-[30px] relative"
+            style={{ border: "2px solid #6470f1" }}
+          >
+            <div className="absolute -top-3 right-5 bg-brand-600 text-white text-[11px] font-semibold px-[10px] py-1 rounded-full">
+              BEST VALUE — SAVE $667
             </div>
-            <p className="font-semibold text-white mb-1">Yearly</p>
+            <p className="text-sm font-semibold text-brand-600 mb-1.5">Annual</p>
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-4xl font-bold text-white">$497</span>
-              <span className="text-brand-300 text-sm">/ year</span>
+              <span className="text-[46px] font-bold tracking-tight tabular-nums">$497</span>
+              <span className="text-gray-500 text-sm">/year</span>
             </div>
-            <p className="text-brand-400 text-xs mb-4">$41.42/month, billed annually</p>
-            <ul className="space-y-2 mb-6 text-sm">
-              {FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-brand-200">
-                  <Check className="h-4 w-4 text-green-400 shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
             <Link href="/signup">
-              <Button variant="gradient" className="w-full">Get Best Value</Button>
+              <Button variant="gradient" className="w-full mb-5">Get Best Value</Button>
             </Link>
+            <PricingFeatureList />
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function PricingFeatureList() {
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {FEATURES.map((f) => (
+        <li key={f} className="flex items-start gap-2 text-[13px] text-gray-700">
+          <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+          </span>
+          {f}
+        </li>
+      ))}
+    </ul>
   );
 }
