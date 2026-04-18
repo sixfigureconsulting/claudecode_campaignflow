@@ -13,6 +13,7 @@ import {
   FileBarChart2,
   Zap,
   Inbox,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,12 @@ const navItems = [
     label: "Inbox",
     icon: Inbox,
     badge: null,
+  },
+  {
+    href: "/automations",
+    label: "Automations",
+    icon: MessageSquare,
+    badge: "NEW",
   },
   {
     href: "/billing",

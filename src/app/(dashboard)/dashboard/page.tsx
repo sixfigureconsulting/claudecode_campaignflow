@@ -5,6 +5,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { OutboundAreaChart } from "@/components/charts/OutboundAreaChart";
 import { CampaignAnalyticsTable } from "@/components/dashboard/CampaignAnalyticsTable";
 import { DashboardReports } from "@/components/dashboard/DashboardReports";
+import { SocialCampaignCards } from "@/components/dashboard/SocialCampaignCards";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -35,6 +36,13 @@ export default async function DashboardPage() {
     .select(`*, clients!inner(user_id), reports(*, report_metrics(*))`)
     .eq("clients.user_id", user.id)
     .order("created_at", { ascending: false });
+
+  const { data: socialCampaigns } = await supabase
+    .from("social_campaigns")
+    .select("id, name, channel, status, total_leads, sent_count, reply_count, failed_count, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
 
   const { data: subscription } = await supabase
     .from("subscriptions")
@@ -179,6 +187,9 @@ export default async function DashboardPage() {
 
       {/* Campaign analytics table */}
       <CampaignAnalyticsTable campaigns={campaignRows} />
+
+      {/* Social campaign channel cards */}
+      <SocialCampaignCards campaigns={socialCampaigns ?? []} />
 
       {/* Reports — inline per campaign */}
       <DashboardReports

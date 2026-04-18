@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/useToast";
 import {
   AlertTriangle,
   LogOut,
@@ -18,15 +19,22 @@ import {
   CreditCard,
   Database,
   Zap,
+  FileBarChart2,
+  Inbox,
+  MessageSquare,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/lists",     label: "Lists",     icon: Database },
-  { href: "/billing",   label: "Billing",   icon: CreditCard },
-  { href: "/settings",  label: "Settings",  icon: Settings },
+  { href: "/dashboard",      label: "Dashboard",      icon: LayoutDashboard, exact: true },
+  { href: "/campaigns",      label: "Campaigns",      icon: Megaphone },
+  { href: "/lists",          label: "Lists",          icon: Database },
+  { href: "/reports",        label: "Reports",        icon: FileBarChart2 },
+  { href: "/super-dm-setter",label: "Super DM Setter",icon: Zap },
+  { href: "/inbox",          label: "Inbox",          icon: Inbox },
+  { href: "/automations",    label: "Automations",    icon: MessageSquare },
+  { href: "/billing",        label: "Billing",        icon: CreditCard },
+  { href: "/settings",       label: "Settings",       icon: Settings },
 ];
 
 interface TopBarProps {
@@ -40,6 +48,18 @@ export function TopBar({ user, isTrialing, trialDaysLeft, creditBalance }: TopBa
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lowBannerDismissed, setLowBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    if (creditBalance < 500 && creditBalance >= 100) {
+      toast({
+        title: "Credits running low",
+        description: `You have ${creditBalance.toLocaleString()} credits remaining. Top up to keep using AI features.`,
+        variant: "default",
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -133,6 +153,23 @@ export function TopBar({ user, isTrialing, trialDaysLeft, creditBalance }: TopBa
           </Button>
         </div>
       </header>
+
+      {/* Persistent low-credit banner at <100 */}
+      {creditBalance < 100 && !lowBannerDismissed && (
+        <div className="bg-red-900/90 border-b border-red-700/60 px-4 py-2 flex items-center justify-between gap-3 text-sm">
+          <div className="flex items-center gap-2 text-red-200">
+            <Zap className="h-3.5 w-3.5 shrink-0 text-red-400" />
+            <span>
+              <span className="font-semibold text-white">{creditBalance} credits left.</span>{" "}
+              AI features will stop working when you hit zero.{" "}
+              <Link href="/billing" className="underline font-medium hover:no-underline text-red-100">Top up now</Link>
+            </span>
+          </div>
+          <button onClick={() => setLowBannerDismissed(true)} className="text-red-400 hover:text-red-200 shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Mobile nav drawer */}
       {mobileMenuOpen && (
