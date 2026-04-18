@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { BetaMessage, BetaContentBlock, BetaToolUseBlock, BetaTextBlock } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPER_AGENT_SYSTEM_PROMPT } from "./system-prompt";
 import {
@@ -79,16 +80,17 @@ Research the ICP, build lead lists using available integrations, generate sequen
   const createdAutomationIds: string[] = [];
 
   for (let turn = 0; turn < 20; turn++) {
-    let response: Anthropic.Message;
+    let response: BetaMessage;
 
     try {
-      response = await client.messages.create({
+      response = await client.beta.messages.create({
         model: "claude-opus-4-7",
         max_tokens: 4096,
         thinking: { type: "adaptive" },
         system: systemPrompt,
-        tools: SUPER_AGENT_TOOLS,
-        messages,
+        tools: SUPER_AGENT_TOOLS as Anthropic.Beta.Messages.BetaTool[],
+        messages: messages as Anthropic.Beta.Messages.BetaMessageParam[],
+        betas: ["interleaved-thinking-2025-05-14"],
       });
     } catch (err) {
       emit("error", { message: `Agent API error: ${String(err)}` });
@@ -101,20 +103,20 @@ Research the ICP, build lead lists using available integrations, generate sequen
 
     // Emit non-tool blocks first
     for (const block of response.content) {
-      if (block.type === "thinking" && block.thinking) {
+      if (block.type === "thinking" && "thinking" in block && block.thinking) {
         emit("agent_thinking", { text: block.thinking });
         await persistMessage(supabase, sessionId, userId, "assistant", [block], "agent_thinking", { text: block.thinking });
-      } else if (block.type === "text" && block.text.trim()) {
-        emit("agent_text", { text: block.text });
-        await persistMessage(supabase, sessionId, userId, "assistant", [block], "agent_text", { text: block.text });
+      } else if (block.type === "text" && (block as BetaTextBlock).text.trim()) {
+        emit("agent_text", { text: (block as BetaTextBlock).text });
+        await persistMessage(supabase, sessionId, userId, "assistant", [block], "agent_text", { text: (block as BetaTextBlock).text });
       }
     }
 
     // Add assistant turn to history
-    messages.push({ role: "assistant", content: response.content });
+    messages.push({ role: "assistant", content: response.content as Anthropic.MessageParam["content"] });
 
     // Execute all tool_use blocks and collect results
-    const toolUseBlocks = response.content.filter((b: Anthropic.ContentBlock): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+    const toolUseBlocks = response.content.filter((b: BetaContentBlock): b is BetaToolUseBlock => b.type === "tool_use");
 
     if (toolUseBlocks.length > 0) {
       const toolResultContent: Anthropic.ToolResultBlockParam[] = [];
@@ -181,7 +183,7 @@ Research the ICP, build lead lists using available integrations, generate sequen
 
     if (response.stop_reason === "end_turn") {
       // Parse OutreachPlan from the last text block
-      const lastText = [...response.content].reverse().find((b: Anthropic.ContentBlock): b is Anthropic.TextBlock => b.type === "text");
+      const lastText = [...response.content].reverse().find((b: BetaContentBlock): b is BetaTextBlock => b.type === "text");
       let outreachPlan: OutreachPlan | null = null;
 
       if (lastText) {
