@@ -86,12 +86,68 @@ export async function GET(request: NextRequest) {
   }
 
   // ── 3. Reddit ─────────────────────────────────────────────────────────────
-  // Reddit sync not yet implemented — placeholder for future expansion
-  summary.reddit = { note: "pending implementation" };
+  const { data: redditConnections } = await supabase
+    .from("oauth_connections")
+    .select("user_id")
+    .eq("platform", "reddit");
+
+  const redditUserIds = [...new Set((redditConnections ?? []).map((c: { user_id: string }) => c.user_id))];
+  let redditSynced = 0;
+  let redditErrors = 0;
+
+  for (const uid of redditUserIds) {
+    try {
+      const res = await fetch(`${base}/api/inbox/sync/reddit`, {
+        headers: {
+          Authorization: cronHeaders.Authorization,
+          "Content-Type": cronHeaders["Content-Type"],
+          "x-cron-user-id": uid as string,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        redditSynced += data.synced ?? 0;
+      } else {
+        redditErrors++;
+      }
+    } catch {
+      redditErrors++;
+    }
+  }
+
+  summary.reddit = { users: redditUserIds.length, synced: redditSynced, errors: redditErrors };
 
   // ── 4. Twitter / X ────────────────────────────────────────────────────────
-  // Twitter inbox sync not yet implemented — placeholder
-  summary.twitter = { note: "pending implementation" };
+  const { data: twitterConnections } = await supabase
+    .from("oauth_connections")
+    .select("user_id")
+    .eq("platform", "twitter");
+
+  const twitterUserIds = [...new Set((twitterConnections ?? []).map((c: { user_id: string }) => c.user_id))];
+  let twitterSynced = 0;
+  let twitterErrors = 0;
+
+  for (const uid of twitterUserIds) {
+    try {
+      const res = await fetch(`${base}/api/inbox/sync/twitter`, {
+        headers: {
+          Authorization: cronHeaders.Authorization,
+          "Content-Type": cronHeaders["Content-Type"],
+          "x-cron-user-id": uid as string,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        twitterSynced += data.synced ?? 0;
+      } else {
+        twitterErrors++;
+      }
+    } catch {
+      twitterErrors++;
+    }
+  }
+
+  summary.twitter = { users: twitterUserIds.length, synced: twitterSynced, errors: twitterErrors };
 
   console.log("sync-inbox cron completed", summary);
   return NextResponse.json({ ok: true, summary });
