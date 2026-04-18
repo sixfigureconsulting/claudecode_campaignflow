@@ -250,14 +250,13 @@ export async function GET(request: NextRequest) {
         .select("project_id, projects!inner(client_id, clients!inner(user_id))")
         .eq("service", "instantly");
 
-      const rawIds = (integrations ?? [])
-        .map(
-          (i: {
-            projects: {
-              clients: { user_id: string };
-            };
-          }) => i.projects?.clients?.user_id as string | undefined
-        )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawIds = (integrations ?? [] as any[])
+        .map((i: any) => {
+          const proj = Array.isArray(i.projects) ? i.projects[0] : i.projects;
+          const client = proj && (Array.isArray(proj.clients) ? proj.clients[0] : proj.clients);
+          return client?.user_id as string | undefined;
+        })
         .filter((uid: string | undefined): uid is string => typeof uid === "string");
       targetUserIds = [...new Set(rawIds)] as string[];
     }
