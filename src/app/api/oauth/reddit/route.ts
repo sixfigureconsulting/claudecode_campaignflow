@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
 
   // CSRF protection: embed user ID in state, sign it
   const stateRaw = `${user.id}:${Date.now()}`;
-  const stateSecret = process.env.NEXTAUTH_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "secret";
+  const stateSecret = process.env.NEXTAUTH_SECRET;
+  if (!stateSecret) {
+    return NextResponse.json({ error: "Server misconfiguration: NEXTAUTH_SECRET not set" }, { status: 500 });
+  }
   const state = crypto
     .createHmac("sha256", stateSecret)
     .update(stateRaw)
