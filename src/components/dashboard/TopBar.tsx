@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getInitials, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/useToast";
+import { toast } from "@/components/ui/toast";
 import {
   AlertTriangle,
   LogOut,

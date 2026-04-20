@@ -82,7 +82,7 @@ export default async function ReportPage({
   // ── Fetch all campaigns to compute global totals ─────────────────────────
   const { data: allCampaigns } = await supabase
     .from("projects")
-    .select("id, reports(report_metrics(*))")
+    .select("id, clients!inner(user_id), reports(report_metrics(*))")
     .eq("clients.user_id", user.id)
     .neq("name", "__integrations__")
     .neq("name", "__default__");

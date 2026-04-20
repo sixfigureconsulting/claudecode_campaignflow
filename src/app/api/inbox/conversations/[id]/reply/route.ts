@@ -105,20 +105,21 @@ Write a reply:`;
       conversation_id: id,
       user_id: user.id,
       direction: "outbound",
+      sender_name: user.user_metadata?.full_name ?? user.email ?? "You",
+      sender_email: user.email ?? "",
       body: replyBody,
       sent_at: new Date().toISOString(),
     })
-    .select("id, direction, body, sent_at")
+    .select("id, conversation_id, user_id, direction, sender_name, sender_email, body, sent_at, created_at")
     .single();
 
   if (msgErr) return NextResponse.json({ error: msgErr.message }, { status: 500 });
 
-  // Update conversation last_message_at and increment count
+  // Update conversation last_message_at
   await supabase
     .from("inbox_conversations")
     .update({
       last_message_at: new Date().toISOString(),
-      message_count: supabase.rpc("increment", { row_id: id }) as unknown as number,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

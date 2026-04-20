@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Zap, Pause, Play, Trash2, AlertTriangle, ExternalLink, CheckCircle2, Skull } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/useToast";
+import { toast } from "@/components/ui/toast";
 
 interface Automation {
   id: string;
