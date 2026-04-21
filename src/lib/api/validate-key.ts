@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function validateApiKey(
   request: NextRequest
@@ -26,6 +27,10 @@ export async function validateApiKey(
   if (!apiKey || !apiKey.active) {
     throw NextResponse.json({ error: "Invalid or revoked API key" }, { status: 401 });
   }
+
+  // Rate limit: 100 requests per minute per API key
+  const rl = rateLimit(`v1:${apiKey.id}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) throw rateLimitResponse(rl.resetAt);
 
   // Fire-and-forget last_used_at update
   supabase

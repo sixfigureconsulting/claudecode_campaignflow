@@ -196,11 +196,18 @@ export async function POST(request: NextRequest) {
       const apiKey = getApiKey(config);
       if (!apiKey) return NextResponse.json({ error: "Apify API token not configured. Add it in Settings → Integrations." }, { status: 400 });
 
+      // Validate URL is an Apify domain before fetching (prevent SSRF)
+      let parsedApifyUrl: URL;
+      try { parsedApifyUrl = new URL(inputValue.trim()); } catch {
+        return NextResponse.json({ error: "Invalid Apify URL." }, { status: 400 });
+      }
+      if (parsedApifyUrl.hostname !== "api.apify.com") {
+        return NextResponse.json({ error: "Apify URL must point to api.apify.com." }, { status: 400 });
+      }
+
       // Support both dataset URLs and actor run URLs
-      const url = inputValue.trim().includes("?")
-        ? `${inputValue.trim()}&token=${apiKey}`
-        : `${inputValue.trim()}?token=${apiKey}`;
-      const res = await fetch(url);
+      parsedApifyUrl.searchParams.set("token", apiKey);
+      const res = await fetch(parsedApifyUrl.toString());
       if (!res.ok) return NextResponse.json({ error: `Apify error: ${res.statusText}` }, { status: 502 });
       const items: Record<string, unknown>[] = await res.json();
       const leads = items.flatMap((item) => Array.isArray(item) ? item as Record<string, unknown>[] : [item]).map(mapApifyItem).filter((l): l is CampaignLead => l !== null);
