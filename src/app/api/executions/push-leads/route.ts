@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
 import { pushLeadsSchema } from "@/lib/validations";
 import { requireCredits, deductCredits } from "@/lib/credits";
+import { getOutboundSyncConfig, ensureOutboundSyncWebhook } from "@/lib/integrations/outboundsync";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -629,6 +630,57 @@ export async function POST(request: NextRequest) {
     }
 
     await Promise.all(tasks);
+
+    // ── OutboundSync auto-wire (best-effort) ──────────────────────────────────
+    // If the user has OutboundSync configured, register their per-SEP webhook
+    // URL on the SEP campaign we just pushed into. Failures are surfaced on the
+    // response but never block the push itself.
+    const osCfg = await getOutboundSyncConfig(supabase, user.id);
+    if (osCfg) {
+      const wireTasks: Promise<void>[] = [];
+
+      const instantlyRes = results.instantly as (PushResult & { campaignId?: string }) | undefined;
+      if (instantlyRes?.success && instantlyRes.campaignId && osCfg.instantly_webhook_url) {
+        const cfg = await getGlobalApiConfig(supabase, user.id, "instantly");
+        const key = getApiKey(cfg);
+        if (key) {
+          wireTasks.push((async () => {
+            const r = await ensureOutboundSyncWebhook({
+              sep: "instantly",
+              sepCampaignId: instantlyRes.campaignId!,
+              sepApiKey: key,
+              outboundSyncUrl: osCfg.instantly_webhook_url!,
+            });
+            results.outboundsync_webhook_instantly = {
+              success: r.registered,
+              count: 0,
+              message: r.skipped ?? r.error ?? "registered",
+            };
+          })());
+        }
+      }
+
+      if (results.smartlead?.success && osCfg.smartlead_webhook_url) {
+        const cfg = await getGlobalApiConfig(supabase, user.id, "smartlead");
+        if (cfg && typeof cfg === "object" && cfg.api_key && cfg.campaign_id) {
+          wireTasks.push((async () => {
+            const r = await ensureOutboundSyncWebhook({
+              sep: "smartlead",
+              sepCampaignId: cfg.campaign_id,
+              sepApiKey: cfg.api_key,
+              outboundSyncUrl: osCfg.smartlead_webhook_url!,
+            });
+            results.outboundsync_webhook_smartlead = {
+              success: r.registered,
+              count: 0,
+              message: r.skipped ?? r.error ?? "registered",
+            };
+          })());
+        }
+      }
+
+      await Promise.all(wireTasks);
+    }
 
     const successDestinations = Object.entries(results)
       .filter(([, v]) => v.success).map(([k]) => k).join(", ");

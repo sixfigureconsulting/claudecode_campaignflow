@@ -122,6 +122,8 @@ export const INTEGRATION_SERVICES = [
   "hunter", "lusha",
   // Calling platforms
   "retell", "vapi", "bland", "synthflow", "air", "twilio",
+  // CRM sync
+  "outboundsync",
 ] as const;
 
 export const integrationConfigSchema = z.object({

@@ -28,6 +28,7 @@ export function LandingNav() {
           <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How it works</a>
           <a href="#pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
           <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
+          <a href="https://blog.campaignflowpro.com" className="hover:text-gray-900 transition-colors">Blog</a>
         </div>
 
         <div className="flex items-center gap-2">

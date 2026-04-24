@@ -141,6 +141,19 @@ const INTEGRATIONS: Record<string, ServiceMeta> = {
     logo: { type: "si", slug: "hubspot", bg: "#ff7a59" },
     fields: [{ key: "api_key", label: "Private App Token", placeholder: "pat-eu1-...", required: true, secret: true }],
   },
+  outboundsync: {
+    label: "OutboundSync", usedIn: "CRM Sync",
+    description: "Pipe replies, bounces, and unsubscribes from Instantly/Smartlead/Heyreach into your CRM (HubSpot, Salesforce, Close). Paste your per-SEP webhook URL from your OutboundSync workspace — we auto-register it on campaign launch. Prospect replies from the unified inbox are forwarded to the generic URL with an HMAC-SHA256 signature.",
+    logo: { type: "initials", initials: "OS", bg: "#0f766e" },
+    multiField: true,
+    fields: [
+      { key: "signing_secret",        label: "HMAC Signing Secret",     placeholder: "any-random-string-32+chars", required: true, secret: true },
+      { key: "instantly_webhook_url", label: "Instantly Webhook URL",   placeholder: "https://hooks.outboundsync.com/instantly/...", required: false },
+      { key: "smartlead_webhook_url", label: "Smartlead Webhook URL",   placeholder: "https://hooks.outboundsync.com/smartlead/...", required: false },
+      { key: "heyreach_webhook_url",  label: "Heyreach Webhook URL",    placeholder: "https://hooks.outboundsync.com/heyreach/...",  required: false },
+      { key: "generic_webhook_url",   label: "Generic (CampaignFlow) Webhook URL", placeholder: "https://hooks.outboundsync.com/generic/...", required: false },
+    ],
+  },
 
   // ── Notifications ──────────────────────────────────────────────────────────
   slack: {
@@ -561,6 +574,21 @@ export function GlobalIntegrationsForm({ existingConfigs }: { existingConfigs: S
             connection={oauthConnections.find((c) => c.platform === "twitter")}
             connectUrl="/api/oauth/twitter"
             onDisconnect={handleDisconnectOAuth}
+          />
+          <IntegrationCard
+            serviceId="manychat"
+            meta={{
+              label: "ManyChat",
+              description: "Connect your ManyChat account to send Instagram and Facebook DMs to prospects. Requires an active ManyChat account linked to your IG Business page.",
+              usedIn: "Instagram / Facebook outreach",
+              logo: { type: "initials", initials: "MC", bg: "#00aff0" },
+              fields: [{ key: "api_key", label: "API Key", placeholder: "your-manychat-api-key", required: true, secret: true }],
+            }}
+            existing={getExisting("manychat")}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            saving={saving === "manychat"}
+            deleting={deleting === "manychat"}
           />
         </div>
       </div>

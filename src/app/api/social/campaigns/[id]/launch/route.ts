@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
 import { deductCredits } from "@/lib/credits";
+import { getOutboundSyncConfig, ensureOutboundSyncWebhook } from "@/lib/integrations/outboundsync";
 
 // POST /api/social/campaigns/[id]/launch
 // Launches a social DM campaign:
@@ -37,7 +38,7 @@ export async function POST(
   // Fetch leads that are still pending
   const { data: leads, error: leadsErr } = await supabase
     .from("social_campaign_leads")
-    .select("id, first_name, last_name, email, company, title, linkedin_url, reddit_username, twitter_handle")
+    .select("id, first_name, last_name, email, company, title, linkedin_url, reddit_username, twitter_handle, instagram_handle")
     .eq("campaign_id", id)
     .eq("status", "pending")
     .limit(100); // hard cap per launch — prevents runaway sends
@@ -136,6 +137,17 @@ export async function POST(
         .from("social_campaign_leads")
         .update({ status: "sent", sent_at: new Date().toISOString() })
         .in("id", leadIds);
+
+      // OutboundSync auto-wire (best-effort) — register user's Heyreach webhook URL
+      const osCfg = await getOutboundSyncConfig(supabase, user.id);
+      if (osCfg?.heyreach_webhook_url && listId) {
+        await ensureOutboundSyncWebhook({
+          sep: "heyreach",
+          sepCampaignId: listId,
+          sepApiKey: heyreachKey,
+          outboundSyncUrl: osCfg.heyreach_webhook_url,
+        });
+      }
     } else {
       failedCount = leads.length;
       errors.push("Heyreach API error: " + addRes.status);
@@ -220,9 +232,49 @@ export async function POST(
     }
   }
 
+  // ── Instagram / Facebook → ManyChat send ─────────────────────────────────
+  else if (channel === "instagram" || channel === "facebook") {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+    for (const lead of leads) {
+      const handle = lead.instagram_handle;
+      if (!handle) {
+        await supabase
+          .from("social_campaign_leads")
+          .update({ status: "skipped", error_message: "No Instagram handle" })
+          .eq("id", lead.id);
+        continue;
+      }
+
+      try {
+        const res = await fetch(`${baseUrl}/api/social/send/manychat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaign_id:      id,
+            lead_id:          lead.id,
+            instagram_handle: handle,
+            message:          (campaign.message_config as Record<string, string>)?.message_template ?? "",
+          }),
+        });
+
+        if (res.ok) {
+          sentCount++;
+        } else {
+          failedCount++;
+          const errData = await res.json().catch(() => ({})) as { error?: string };
+          errors.push(`Failed to DM @${handle}: ${errData.error ?? res.status}`);
+        }
+      } catch (e) {
+        failedCount++;
+        errors.push(String(e));
+      }
+    }
+  }
+
   // ── Other channels → mark active, cron handles send ───────────────────────
   else {
-    // Instagram, Facebook, Email — mark active, cron will process
+    // Email — mark active, cron will process
     sentCount = 0;
   }
 

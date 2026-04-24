@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
+import { forwardEventToOutboundSync } from "@/lib/integrations/outboundsync";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
@@ -159,6 +160,30 @@ ${fullText.slice(0, 3000)}`;
       classification_reason: reason,
       classification_score: score,
     }).eq("id", id).eq("user_id", user.id);
+
+    if (classification === "prospect") {
+      const [firstName, ...rest] = (convo.contact_name ?? "").trim().split(/\s+/);
+      void forwardEventToOutboundSync(supabase, user.id, {
+        event_type: "reply.classified_interested",
+        contact: {
+          email: convo.contact_email,
+          first_name: firstName || null,
+          last_name: rest.join(" ") || null,
+          company: convo.contact_company,
+        },
+        context: {
+          conversation_id: convo.id,
+          subject: convo.subject,
+          classification,
+          classification_score: score,
+          reply_preview: fullText.slice(0, 500),
+        },
+      }).then((r) => {
+        if (!r.forwarded && r.error !== "outboundsync not configured") {
+          console.error("[outboundsync] forward failed:", r.error);
+        }
+      });
+    }
 
     return NextResponse.json({ classification, reason, score });
   } catch (err) {
