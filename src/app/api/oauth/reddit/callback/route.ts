@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { encryptApiKey } from "@/lib/encryption";
 
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const code  = searchParams.get("code");
+  const state = searchParams.get("state");
   const error = searchParams.get("error");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -22,6 +24,25 @@ export async function GET(request: NextRequest) {
   // User denied access
   if (error || !code) {
     return NextResponse.redirect(`${settingsUrl}?reddit_oauth=denied`);
+  }
+
+  // Verify state HMAC to prevent CSRF
+  const stateSecret = process.env.NEXTAUTH_SECRET;
+  if (!stateSecret || !state) {
+    return NextResponse.redirect(`${settingsUrl}?reddit_oauth=error&msg=invalid_state`);
+  }
+  const [hmacReceived, encodedRaw] = state.split(":");
+  if (!hmacReceived || !encodedRaw) {
+    return NextResponse.redirect(`${settingsUrl}?reddit_oauth=error&msg=invalid_state`);
+  }
+  const stateRaw = Buffer.from(encodedRaw, "base64").toString();
+  const hmacExpected = createHmac("sha256", stateSecret).update(stateRaw).digest("hex").slice(0, 16);
+  if (hmacReceived !== hmacExpected) {
+    return NextResponse.redirect(`${settingsUrl}?reddit_oauth=error&msg=invalid_state`);
+  }
+  const [stateUserId] = stateRaw.split(":");
+  if (stateUserId !== user.id) {
+    return NextResponse.redirect(`${settingsUrl}?reddit_oauth=error&msg=user_mismatch`);
   }
 
   const clientId     = process.env.REDDIT_CLIENT_ID;

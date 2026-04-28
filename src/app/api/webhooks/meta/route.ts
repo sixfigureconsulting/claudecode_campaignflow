@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createHmac, timingSafeEqual } from "crypto";
+import { createServiceClient } from "@/lib/supabase/server";
+import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
+const APP_SECRET   = process.env.META_APP_SECRET ?? "";
+
+function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
+  if (!APP_SECRET || !signatureHeader) return false;
+  const expected = `sha256=${createHmac("sha256", APP_SECRET).update(rawBody).digest("hex")}`;
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(signatureHeader));
+  } catch {
+    return false;
+  }
+}
 
 // Meta webhook verification handshake
 export async function GET(req: NextRequest) {
@@ -18,12 +31,25 @@ export async function GET(req: NextRequest) {
 
 // Incoming comment event
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
+  // Verify Meta webhook signature before processing anything
+  const rawBody = await req.text();
+  const signature = req.headers.get("x-hub-signature-256");
+  if (!verifySignature(rawBody, signature)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  let body: { entry?: unknown[] };
+  try { body = JSON.parse(rawBody); } catch { return NextResponse.json({ ok: true }); }
   if (!body) return NextResponse.json({ ok: true });
 
-  const supabase = await createClient();
+  // Service client — bypasses RLS to read active automations across all users
+  const supabase = createServiceClient();
 
-  for (const entry of body.entry ?? []) {
+  type MetaEntry  = { instagram?: unknown; changes?: MetaChange[] };
+  type MetaChange = { field?: string; value?: Record<string, unknown> };
+
+  for (const rawEntry of body.entry ?? []) {
+    const entry = rawEntry as MetaEntry;
     const platform: "instagram" | "facebook" = entry.instagram ? "instagram" : "facebook";
     const changes = entry.changes ?? [];
 
@@ -31,9 +57,9 @@ export async function POST(req: NextRequest) {
       if (change.field !== "comments" && change.field !== "feed") continue;
 
       const value = change.value ?? {};
-      const commentText: string = (value.text ?? value.message ?? "").toLowerCase();
-      const commenterId: string = value.from?.id ?? value.sender?.id ?? "";
-      const postId: string = value.media?.id ?? value.post_id ?? "";
+      const commentText: string = ((value.text ?? value.message ?? "") as string).toLowerCase();
+      const commenterId: string = (value.from as { id?: string })?.id ?? (value.sender as { id?: string })?.id ?? "";
+      const postId: string = (value.media as { id?: string })?.id ?? (value.post_id as string) ?? "";
 
       if (!commentText || !commenterId) continue;
 
@@ -53,20 +79,20 @@ export async function POST(req: NextRequest) {
           .update({ trigger_count: (auto.trigger_count ?? 0) + 1 })
           .eq("id", auto.id);
 
-        const { data: conn } = await supabase
-          .from("oauth_connections")
-          .select("access_token_encrypted")
-          .eq("user_id", auto.user_id)
-          .eq("platform", "manychat")
-          .single();
+        // Fetch the ManyChat API key from integration_configs (properly decrypted)
+        const mcConfig = await getGlobalApiConfig(supabase, auto.user_id, "manychat");
+        const mcApiKey = getApiKey(mcConfig);
+        if (!mcApiKey) continue;
 
-        if (!conn?.access_token_encrypted) continue;
+        const mcEndpoint = platform === "instagram"
+          ? "https://api.manychat.com/instagram/sending/sendContent"
+          : "https://api.manychat.com/fb/sending/sendContent";
 
         try {
-          const mcRes = await fetch("https://api.manychat.com/fb/sending/sendContent", {
+          const mcRes = await fetch(mcEndpoint, {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${conn.access_token_encrypted}`,
+              Authorization: `Bearer ${mcApiKey}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -84,9 +110,11 @@ export async function POST(req: NextRequest) {
               .from("comment_automations")
               .update({ dm_sent_count: (auto.dm_sent_count ?? 0) + 1 })
               .eq("id", auto.id);
+          } else {
+            console.error(`ManyChat send failed for automation ${auto.id}: HTTP ${mcRes.status}`);
           }
-        } catch {
-          // Silently continue — don't block the webhook response
+        } catch (err) {
+          console.error(`ManyChat send error for automation ${auto.id}:`, err);
         }
       }
     }

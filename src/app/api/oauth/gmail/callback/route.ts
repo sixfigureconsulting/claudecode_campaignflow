@@ -23,7 +23,10 @@ export async function GET(request: NextRequest) {
   // Verify HMAC
   const [hmacReceived, encodedRaw] = state.split(":");
   const stateRaw = Buffer.from(encodedRaw, "base64").toString();
-  const stateSecret = process.env.NEXTAUTH_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "secret";
+  const stateSecret = process.env.NEXTAUTH_SECRET;
+  if (!stateSecret) {
+    return NextResponse.redirect(new URL("/inbox?error=server_misconfiguration", appUrl));
+  }
   const hmacExpected = crypto.createHmac("sha256", stateSecret).update(stateRaw).digest("hex").slice(0, 16);
   if (hmacReceived !== hmacExpected) {
     return NextResponse.redirect(new URL("/inbox?error=invalid_state", appUrl));
