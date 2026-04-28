@@ -3,6 +3,7 @@ import { validateApiKey } from "@/lib/api/validate-key";
 import { createServiceClient } from "@/lib/supabase/server";
 import { projectSchema } from "@/lib/validations";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const createProjectSchema = projectSchema.extend({
   client_id: z.string().uuid("Invalid client_id"),
@@ -10,11 +11,14 @@ const createProjectSchema = projectSchema.extend({
 
 export async function GET(request: NextRequest) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const clientId = request.nextUrl.searchParams.get("client_id");
   const supabase = createServiceClient();
@@ -30,18 +34,20 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Strip the joined clients field from response
   const clean = (data ?? []).map(({ clients: _c, ...p }) => p);
   return NextResponse.json({ data: clean });
 }
 
 export async function POST(request: NextRequest) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json();
   const parsed = createProjectSchema.safeParse(body);
@@ -51,7 +57,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Verify ownership of the client
   const { data: client } = await supabase
     .from("clients")
     .select("id")

@@ -196,6 +196,12 @@ export async function POST(request: NextRequest) {
       const apiKey = getApiKey(config);
       if (!apiKey) return NextResponse.json({ error: "Apify API token not configured. Add it in Settings → Integrations." }, { status: 400 });
 
+      // Validate URL hostname before fetching (SSRF protection)
+      const parsedApifyUrl = (() => { try { return new URL(inputValue.trim()); } catch { return null; } })();
+      const ALLOWED_APIFY_HOSTS = new Set(["api.apify.com", "storage.apify.com"]);
+      if (!parsedApifyUrl || !ALLOWED_APIFY_HOSTS.has(parsedApifyUrl.hostname)) {
+        return NextResponse.json({ error: "Invalid Apify URL. Must be an api.apify.com dataset or actor-run URL." }, { status: 400 });
+      }
       // Support both dataset URLs and actor run URLs
       const url = inputValue.trim().includes("?")
         ? `${inputValue.trim()}&token=${apiKey}`

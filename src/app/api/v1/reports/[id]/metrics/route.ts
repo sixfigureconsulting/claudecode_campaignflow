@@ -2,22 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/api/validate-key";
 import { createServiceClient } from "@/lib/supabase/server";
 import { metricsArraySchema } from "@/lib/validations";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const { id: reportId } = await params;
   const supabase = createServiceClient();
 
-  // Verify ownership
   const { data: report } = await supabase
     .from("reports")
     .select("id, projects!inner(clients!inner(user_id))")
