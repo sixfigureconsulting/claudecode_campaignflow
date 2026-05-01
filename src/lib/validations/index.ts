@@ -117,7 +117,7 @@ export type AIRecommendationRequest = z.infer<typeof aiRecommendationRequestSche
 // ── Integration Config ────────────────────────────────────────────────────────
 
 export const INTEGRATION_SERVICES = [
-  "apollo", "apify", "heyreach", "instantly", "smartlead", "openai", "hubspot", "slack",
+  "apollo", "apify", "phantombuster", "heyreach", "instantly", "smartlead", "lemlist", "openai", "hubspot", "slack",
   // Lead enrichment
   "hunter", "lusha",
   // Calling platforms
