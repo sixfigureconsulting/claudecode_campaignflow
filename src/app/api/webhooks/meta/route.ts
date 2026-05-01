@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
+const APP_SECRET   = process.env.META_APP_SECRET ?? "";
+
+function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
+  if (!APP_SECRET) {
+    console.warn("[meta-webhook] META_APP_SECRET not set — skipping signature verification");
+    return true;
+  }
+  if (!signatureHeader?.startsWith("sha256=")) return false;
+  const expected = createHmac("sha256", APP_SECRET).update(rawBody).digest("hex");
+  const received = signatureHeader.slice(7); // strip "sha256="
+  try {
+    return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(received, "hex"));
+  } catch {
+    return false;
+  }
+}
 
 // Meta webhook verification handshake
 export async function GET(req: NextRequest) {
@@ -18,22 +35,41 @@ export async function GET(req: NextRequest) {
 
 // Incoming comment event
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ ok: true });
+  const rawBody = await req.text();
+  const signatureHeader = req.headers.get("x-hub-signature-256");
+
+  if (!verifySignature(rawBody, signatureHeader)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
 
   const supabase = await createClient();
 
-  for (const entry of body.entry ?? []) {
+  for (const entry of (body.entry as Record<string, unknown>[]) ?? []) {
     const platform: "instagram" | "facebook" = entry.instagram ? "instagram" : "facebook";
-    const changes = entry.changes ?? [];
+    const changes = (entry.changes as Record<string, unknown>[]) ?? [];
 
     for (const change of changes) {
       if (change.field !== "comments" && change.field !== "feed") continue;
 
-      const value = change.value ?? {};
-      const commentText: string = (value.text ?? value.message ?? "").toLowerCase();
-      const commenterId: string = value.from?.id ?? value.sender?.id ?? "";
-      const postId: string = value.media?.id ?? value.post_id ?? "";
+      const value = (change.value as Record<string, unknown>) ?? {};
+      const commentText: string = (
+        (value.text as string) ?? (value.message as string) ?? ""
+      ).toLowerCase();
+      const commenterId: string =
+        ((value.from as Record<string, string>)?.id) ??
+        ((value.sender as Record<string, string>)?.id) ??
+        "";
+      const postId: string =
+        ((value.media as Record<string, string>)?.id) ??
+        (value.post_id as string) ??
+        "";
 
       if (!commentText || !commenterId) continue;
 
