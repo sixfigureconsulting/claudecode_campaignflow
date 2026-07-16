@@ -67,6 +67,12 @@ export async function POST(request: NextRequest) {
     const client = (report.projects as any).clients;
     const project = report.projects as any;
 
+    // Explicit ownership check — defense-in-depth on top of RLS
+    const ownerUserId = Array.isArray(client) ? client[0]?.user_id : client?.user_id;
+    if (ownerUserId !== user.id) {
+      return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    }
+
     // 5. Fetch previous report for comparison
     const { data: previousReports } = await supabase
       .from("reports")
