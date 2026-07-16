@@ -1,8 +1,22 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2025-02-24.acacia",
-  typescript: true,
+// Lazy singleton — avoids throwing at module evaluation when the env var is absent
+// (e.g. during Next.js static page-data collection at build time).
+let _stripe: Stripe | null = null;
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
+    _stripe = new Stripe(key, { apiVersion: "2025-02-24.acacia", typescript: true });
+  }
+  return _stripe;
+}
+
+// Re-export as `stripe` for backwards-compat with callers that use `stripe.xxx` directly.
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return (getStripe() as unknown as Record<string | symbol, unknown>)[prop];
+  },
 });
 
 export const PLANS = {

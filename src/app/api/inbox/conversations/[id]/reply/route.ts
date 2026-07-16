@@ -115,15 +115,15 @@ Write a reply:`;
 
   if (msgErr) return NextResponse.json({ error: msgErr.message }, { status: 500 });
 
-  // Update conversation last_message_at
-  await supabase
-    .from("inbox_conversations")
-    .update({
-      last_message_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .eq("user_id", user.id);
+  // Atomically increment count (outbound → don't mark unread) + update last_message_at
+  await Promise.all([
+    supabase.rpc("increment_message_count", { conversation_id: id, mark_unread: false }),
+    supabase
+      .from("inbox_conversations")
+      .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", user.id),
+  ]);
 
   // NOTE: Actual sending via Gmail API / ManyChat / LinkedIn would be triggered here
   // based on convo.inbox_accounts.provider. Tracked as inbox_messages direction='outbound'.
