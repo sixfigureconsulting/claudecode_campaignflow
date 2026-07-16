@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing reportId or invalid tool" }, { status: 400 });
     }
 
-    // Verify report belongs to this user
+    // Verify report belongs to this user (explicit check — don't rely solely on RLS)
     const { data: report } = await supabase
       .from("reports")
       .select("id, project_id, projects!inner(clients!inner(user_id))")
@@ -230,6 +230,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!report) return NextResponse.json({ error: "Report not found" }, { status: 404 });
+
+    const clientData = (report as unknown as { projects: { clients: { user_id: string } } }).projects?.clients;
+    const ownerUserId = Array.isArray(clientData) ? clientData[0]?.user_id : clientData?.user_id;
+    if (ownerUserId !== user.id) {
+      return NextResponse.json({ error: "Report not found" }, { status: 404 });
+    }
 
     // Get decrypted API key from global integrations store
     const apiKey = await getGlobalApiKey(supabase, user.id, tool);
