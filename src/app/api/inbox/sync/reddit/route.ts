@@ -166,7 +166,7 @@ async function syncUserRedditInbox(
           },
           { onConflict: "account_id,external_thread_id", ignoreDuplicates: false }
         )
-        .select("id, message_count")
+        .select("id")
         .single();
 
       if (convoErr || !convoRow) {
@@ -199,14 +199,7 @@ async function syncUserRedditInbox(
         sent_at: sentAt,
       });
 
-      await supabase
-        .from("inbox_conversations")
-        .update({
-          message_count: (convoRow.message_count ?? 0) + 1,
-          is_read: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", convoRow.id);
+      await supabase.rpc("increment_message_count", { conversation_id: convoRow.id });
 
       synced++;
     } catch (err) {

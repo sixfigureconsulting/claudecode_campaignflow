@@ -117,7 +117,7 @@ async function syncUserInstantlyInbox(
           },
           { onConflict: "account_id,external_thread_id", ignoreDuplicates: false }
         )
-        .select("id, message_count")
+        .select("id")
         .single();
 
       if (convoErr || !convoRow) {
@@ -157,15 +157,8 @@ async function syncUserInstantlyInbox(
         sent_at: lastMsgAt,
       });
 
-      // Bump message count and mark unread
-      await supabase
-        .from("inbox_conversations")
-        .update({
-          message_count: (convoRow.message_count ?? 0) + 1,
-          is_read: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", convoRow.id);
+      // Atomically increment message count and mark unread
+      await supabase.rpc("increment_message_count", { conversation_id: convoRow.id });
 
       synced++;
     } catch (err) {

@@ -1,7 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
+const APP_SECRET   = process.env.META_APP_SECRET ?? "";
+
+// Verify X-Hub-Signature-256 header against raw body using META_APP_SECRET.
+// Returns false if APP_SECRET is not configured or signature doesn't match.
+async function verifySignature(req: NextRequest): Promise<{ ok: boolean; rawBody: Buffer }> {
+  const rawBody = Buffer.from(await req.arrayBuffer());
+
+  if (!APP_SECRET) {
+    console.error("META_APP_SECRET is not set — rejecting webhook");
+    return { ok: false, rawBody };
+  }
+
+  const sigHeader = req.headers.get("x-hub-signature-256") ?? "";
+  if (!sigHeader.startsWith("sha256=")) return { ok: false, rawBody };
+
+  const expected = createHmac("sha256", APP_SECRET)
+    .update(rawBody)
+    .digest("hex");
+
+  const providedHex = sigHeader.slice("sha256=".length);
+
+  // timingSafeEqual prevents timing attacks
+  try {
+    const a = Buffer.from(expected, "hex");
+    const b = Buffer.from(providedHex, "hex");
+    if (a.length !== b.length) return { ok: false, rawBody };
+    return { ok: timingSafeEqual(a, b), rawBody };
+  } catch {
+    return { ok: false, rawBody };
+  }
+}
 
 // Meta webhook verification handshake
 export async function GET(req: NextRequest) {
@@ -18,22 +50,39 @@ export async function GET(req: NextRequest) {
 
 // Incoming comment event
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ ok: true });
+  const { ok, rawBody } = await verifySignature(req);
+  if (!ok) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawBody.toString("utf8"));
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
 
   const supabase = await createClient();
 
-  for (const entry of body.entry ?? []) {
-    const platform: "instagram" | "facebook" = entry.instagram ? "instagram" : "facebook";
-    const changes = entry.changes ?? [];
+  for (const entry of (body.entry as unknown[]) ?? []) {
+    const e = entry as Record<string, unknown>;
+    const platform: "instagram" | "facebook" = e.instagram ? "instagram" : "facebook";
+    const changes = (e.changes as unknown[]) ?? [];
 
     for (const change of changes) {
-      if (change.field !== "comments" && change.field !== "feed") continue;
+      const c = change as Record<string, unknown>;
+      if (c.field !== "comments" && c.field !== "feed") continue;
 
-      const value = change.value ?? {};
-      const commentText: string = (value.text ?? value.message ?? "").toLowerCase();
-      const commenterId: string = value.from?.id ?? value.sender?.id ?? "";
-      const postId: string = value.media?.id ?? value.post_id ?? "";
+      const value = (c.value ?? {}) as Record<string, unknown>;
+      const commentText: string = (
+        (value.text as string) ?? (value.message as string) ?? ""
+      ).toLowerCase();
+      const commenterId: string =
+        ((value.from as Record<string, string>)?.id) ??
+        ((value.sender as Record<string, string>)?.id) ?? "";
+      const postId: string =
+        ((value.media as Record<string, string>)?.id) ??
+        (value.post_id as string) ?? "";
 
       if (!commentText || !commenterId) continue;
 

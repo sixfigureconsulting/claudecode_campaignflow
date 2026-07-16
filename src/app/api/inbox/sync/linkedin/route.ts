@@ -107,7 +107,7 @@ async function syncAccountConversations(
           },
           { onConflict: "account_id,external_thread_id", ignoreDuplicates: false }
         )
-        .select("id, message_count")
+        .select("id")
         .single();
 
       if (convoErr || !convoRow) {
@@ -151,16 +151,12 @@ async function syncAccountConversations(
         newMessages++;
       }
 
-      // Update message_count
-      if (newMessages > 0) {
-        await supabase
-          .from("inbox_conversations")
-          .update({
-            message_count: (convoRow.message_count ?? 0) + newMessages,
-            is_read: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", convoRow.id);
+      // Atomically increment for each new inbound message
+      for (let i = 0; i < newMessages; i++) {
+        await supabase.rpc("increment_message_count", {
+          conversation_id: convoRow.id,
+          mark_unread: true,
+        });
       }
 
       synced++;

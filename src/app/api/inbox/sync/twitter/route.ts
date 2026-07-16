@@ -171,7 +171,7 @@ async function syncUserTwitterInbox(
           },
           { onConflict: "account_id,external_thread_id", ignoreDuplicates: false }
         )
-        .select("id, message_count")
+        .select("id")
         .single();
 
       if (convoErr || !convoRow) {
@@ -201,14 +201,10 @@ async function syncUserTwitterInbox(
         sent_at: event.created_at,
       });
 
-      await supabase
-        .from("inbox_conversations")
-        .update({
-          message_count: (convoRow.message_count ?? 0) + 1,
-          is_read: isOutbound ? true : false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", convoRow.id);
+      await supabase.rpc("increment_message_count", {
+        conversation_id: convoRow.id,
+        mark_unread: !isOutbound,
+      });
 
       synced++;
     } catch (err) {
