@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/api/validate-key";
 import { createServiceClient } from "@/lib/supabase/server";
 import { clientSchema } from "@/lib/validations";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
@@ -24,11 +28,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json();
   const parsed = clientSchema.safeParse(body);

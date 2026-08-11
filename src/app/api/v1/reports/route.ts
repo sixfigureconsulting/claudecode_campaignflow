@@ -3,6 +3,7 @@ import { validateApiKey } from "@/lib/api/validate-key";
 import { createServiceClient } from "@/lib/supabase/server";
 import { reportSchema } from "@/lib/validations";
 import { z } from "zod";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const createReportSchema = reportSchema.extend({
   project_id: z.string().uuid("Invalid project_id"),
@@ -10,11 +11,14 @@ const createReportSchema = reportSchema.extend({
 
 export async function GET(request: NextRequest) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const projectId = request.nextUrl.searchParams.get("project_id");
   const supabase = createServiceClient();
@@ -36,11 +40,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let userId: string;
+  let keyId: string;
   try {
-    ({ userId } = await validateApiKey(request));
+    ({ userId, keyId } = await validateApiKey(request));
   } catch (err) {
     return err as NextResponse;
   }
+  const rl = rateLimit(`v1:${keyId}`, { limit: 100, windowMs: 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json();
   const parsed = createReportSchema.safeParse(body);
@@ -50,7 +57,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
 
-  // Verify ownership of the project
   const { data: project } = await supabase
     .from("projects")
     .select("id, clients!inner(user_id)")
