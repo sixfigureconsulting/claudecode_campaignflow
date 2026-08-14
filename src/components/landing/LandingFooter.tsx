@@ -1,4 +1,4 @@
-import { TrendingUp, ExternalLink } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 export function LandingFooter() {
   return (
@@ -14,17 +14,6 @@ export function LandingFooter() {
           </div>
           <span className="font-semibold">CampaignFlow Pro</span>
         </div>
-
-        {/* Pipeline link */}
-        <a
-          href="https://sixfigureconsulting.notion.site/340d8f40861b8136855de3219cb2586b?v=346d8f40861b8065b370000c2b2ec73f&pvs=73"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-brand-300 hover:text-white transition-colors font-medium"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          View Pipeline
-        </a>
 
         {/* Copyright */}
         <div>&copy; 2026 CampaignFlow. All rights reserved.</div>
