@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TrendingUp } from "lucide-react";
 
@@ -31,12 +30,12 @@ export function LandingNav() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/login">
+          <a href="/login">
             <Button variant="ghost" size="sm">Sign in</Button>
-          </Link>
-          <Link href="/signup">
+          </a>
+          <a href="/signup">
             <Button variant="gradient" size="sm">Start Free Trial</Button>
-          </Link>
+          </a>
         </div>
       </div>
     </nav>
