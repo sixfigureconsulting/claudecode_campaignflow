@@ -494,8 +494,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
 
     const { projectId, leads, destinations } = parsed.data;
-    // Webhook URLs for automation tools — provided inline by the user at push time
-    const webhookUrls: Record<string, string> = body.webhookUrls ?? {};
+    // Webhook URLs for automation tools — validated against SSRF before use
+    const rawWebhookUrls: Record<string, unknown> = typeof body.webhookUrls === "object" && body.webhookUrls ? body.webhookUrls : {};
+    const webhookUrls: Record<string, string> = {};
+    for (const [tool, rawUrl] of Object.entries(rawWebhookUrls)) {
+      if (typeof rawUrl !== "string") continue;
+      try {
+        const parsed = new URL(rawUrl);
+        // Only allow HTTPS (not HTTP, not internal schemes)
+        if (parsed.protocol !== "https:") continue;
+        // Block SSRF: reject private/loopback hostnames
+        const host = parsed.hostname.toLowerCase();
+        const blocked = ["localhost", "127.", "0.0.0.0", "[::", "169.254.", "10.", "172.16.", "172.17.", "172.18.", "172.19.", "172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.", "172.26.", "172.27.", "172.28.", "172.29.", "172.30.", "172.31.", "192.168.", "::1", "metadata.google.internal", "instance-data"];
+        if (blocked.some((b) => host === b || host.startsWith(b))) continue;
+        webhookUrls[tool] = rawUrl;
+      } catch {
+        // Invalid URL — skip silently
+      }
+    }
 
     const owned = await verifyOwnership(supabase, projectId, user.id);
     if (!owned) return NextResponse.json({ error: "Not found" }, { status: 404 });

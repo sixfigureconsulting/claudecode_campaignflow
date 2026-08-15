@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // GET /api/social/campaigns — list the user's social campaigns
 export async function GET() {
@@ -22,6 +23,10 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 20 campaign creations per user per hour
+  const rl = rateLimit(`social-campaigns-create:${user.id}`, { limit: 20, windowMs: 60 * 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json() as {
     name: string;

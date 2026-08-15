@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
 import { qualifyLeadsSchema } from "@/lib/validations";
 import { requireCredits, deductCredits } from "@/lib/credits";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 async function verifyOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -27,6 +28,10 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (authError || !user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limit: 5 qualification runs per user per minute (each can batch 100 leads)
+    const rl = rateLimit(`qualify:${user.id}`, { limit: 5, windowMs: 60_000 });
+    if (!rl.success) return rateLimitResponse(rl.resetAt);
 
     const body = await request.json();
     const parsed = qualifyLeadsSchema.safeParse(body);

@@ -21,6 +21,18 @@ const schema = z.object({
   inputValue: z.string().min(1).max(2000),
 });
 
+const APIFY_ALLOWED_HOSTS = ["api.apify.com", "apify.com"];
+
+function validateApifyUrl(raw: string): URL | null {
+  try {
+    const u = new URL(raw.trim());
+    if (u.protocol !== "https:") return null;
+    const host = u.hostname.toLowerCase();
+    if (!APIFY_ALLOWED_HOSTS.some((h) => host === h || host.endsWith("." + h))) return null;
+    return u;
+  } catch { return null; }
+}
+
 // ─── Field mappers ────────────────────────────────────────────────────────────
 
 function mapApolloContact(c: Record<string, unknown>): CampaignLead {
@@ -197,10 +209,10 @@ export async function POST(request: NextRequest) {
       if (!apiKey) return NextResponse.json({ error: "Apify API token not configured. Add it in Settings → Integrations." }, { status: 400 });
 
       // Support both dataset URLs and actor run URLs
-      const url = inputValue.trim().includes("?")
-        ? `${inputValue.trim()}&token=${apiKey}`
-        : `${inputValue.trim()}?token=${apiKey}`;
-      const res = await fetch(url);
+      const apifyParsed = validateApifyUrl(inputValue.trim());
+      if (!apifyParsed) return NextResponse.json({ error: "Invalid Apify URL. Must be an https://api.apify.com URL." }, { status: 400 });
+      apifyParsed.searchParams.set("token", apiKey);
+      const res = await fetch(apifyParsed.toString());
       if (!res.ok) return NextResponse.json({ error: `Apify error: ${res.statusText}` }, { status: 502 });
       const items: Record<string, unknown>[] = await res.json();
       const leads = items.flatMap((item) => Array.isArray(item) ? item as Record<string, unknown>[] : [item]).map(mapApifyItem).filter((l): l is CampaignLead => l !== null);

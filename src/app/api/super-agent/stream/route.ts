@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runAgentLoop } from "@/lib/super-agent/agent-loop";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 300; // 5 minutes — agent loops can be long
 
@@ -10,6 +11,10 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  // Rate limit: 5 streams per user per minute (each stream triggers an expensive LLM agent loop)
+  const rl = rateLimit(`super-agent-stream:${user.id}`, { limit: 5, windowMs: 60_000 });
+  if (!rl.success) return new Response("Too many requests", { status: 429 });
 
   const sessionId = request.nextUrl.searchParams.get("sessionId");
   if (!sessionId) {
