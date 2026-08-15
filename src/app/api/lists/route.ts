@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import type { CampaignLead } from "@/types/database";
 
 // GET /api/lists — fetch all lists for the current user
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 30 list creations per user per hour
+  const rl = rateLimit(`lists-create:${user.id}`, { limit: 30, windowMs: 60 * 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const { name, source, leads } = await request.json() as {
     name: string;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey } from "@/lib/encryption";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/social/send/reddit
 // Sends a private message to a Reddit user using the authenticated user's
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 60 PMs per user per 5 minutes
+  const rl = rateLimit(`reddit-send:${user.id}`, { limit: 60, windowMs: 5 * 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json() as {
     campaign_id:     string;
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
   if (!sendRes.ok) {
     const errText = await sendRes.text();
 
-    // Update lead status to failed
+    // Update lead status to failed — filter by user_id to prevent IDOR
     if (lead_id) {
       await supabase
         .from("social_campaign_leads")
@@ -117,7 +122,8 @@ export async function POST(request: NextRequest) {
           status:        "failed",
           error_message: `Reddit API ${sendRes.status}: ${errText.slice(0, 200)}`,
         })
-        .eq("id", lead_id);
+        .eq("id", lead_id)
+        .eq("user_id", user.id);
     }
 
     return NextResponse.json(
@@ -134,7 +140,7 @@ export async function POST(request: NextRequest) {
     // Reddit's compose endpoint sometimes returns empty body on success — that's fine
   }
 
-  // Update lead status to sent
+  // Update lead status to sent — filter by user_id to prevent IDOR
   if (lead_id) {
     await supabase
       .from("social_campaign_leads")
@@ -143,21 +149,24 @@ export async function POST(request: NextRequest) {
         sent_at:            new Date().toISOString(),
         platform_message_id: platformMessageId,
       })
-      .eq("id", lead_id);
+      .eq("id", lead_id)
+      .eq("user_id", user.id);
   }
 
-  // Increment campaign sent_count
+  // Increment campaign sent_count — filter by user_id to prevent IDOR
   if (campaign_id) {
     const { data: camp } = await supabase
       .from("social_campaigns")
       .select("sent_count")
       .eq("id", campaign_id)
+      .eq("user_id", user.id)
       .single();
     if (camp) {
       await supabase
         .from("social_campaigns")
         .update({ sent_count: camp.sent_count + 1 })
-        .eq("id", campaign_id);
+        .eq("id", campaign_id)
+        .eq("user_id", user.id);
     }
   }
 

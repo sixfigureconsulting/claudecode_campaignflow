@@ -170,7 +170,11 @@ export async function POST(
       try {
         const res = await fetch(`${baseUrl}/api/social/send/reddit`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            // Forward session cookie so the send route can authenticate the user
+            "Cookie": request.headers.get("cookie") ?? "",
+          },
           body: JSON.stringify({
             campaign_id: id,
             lead_id: lead.id,
@@ -210,7 +214,10 @@ export async function POST(
       try {
         const res = await fetch(`${baseUrl}/api/social/send/twitter`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Cookie": request.headers.get("cookie") ?? "",
+          },
           body: JSON.stringify({
             campaign_id: id,
             lead_id: lead.id,
@@ -249,7 +256,10 @@ export async function POST(
       try {
         const res = await fetch(`${baseUrl}/api/social/send/manychat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Cookie": request.headers.get("cookie") ?? "",
+          },
           body: JSON.stringify({
             campaign_id:      id,
             lead_id:          lead.id,

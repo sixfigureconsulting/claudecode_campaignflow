@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const ALLOWED_PLATFORMS = ["reddit", "twitter", "instagram", "facebook", "manychat", "linkedin", "gmail"] as const;
+
 // GET /api/oauth/connections — list the user's connected OAuth platforms
 export async function GET() {
   const supabase = await createClient();
@@ -24,6 +26,9 @@ export async function DELETE(request: NextRequest) {
 
   const platform = new URL(request.url).searchParams.get("platform");
   if (!platform) return NextResponse.json({ error: "platform is required" }, { status: 400 });
+  if (!(ALLOWED_PLATFORMS as readonly string[]).includes(platform)) {
+    return NextResponse.json({ error: "Invalid platform" }, { status: 400 });
+  }
 
   const { error } = await supabase
     .from("oauth_connections")

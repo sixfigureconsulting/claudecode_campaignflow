@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { decryptApiKey, encryptApiKey } from "@/lib/encryption";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/social/send/twitter
 // Sends a DM to a Twitter user using the authenticated user's Twitter OAuth 2.0 token.
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 60 DMs per user per 5 minutes (Twitter's own limits are stricter but this prevents runaway loops)
+  const rl = rateLimit(`twitter-send:${user.id}`, { limit: 60, windowMs: 5 * 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json() as {
     campaign_id:      string;
@@ -110,7 +115,8 @@ export async function POST(request: NextRequest) {
         await supabase
           .from("social_campaign_leads")
           .update({ status: "failed", error_message: failMsg })
-          .eq("id", lead_id);
+          .eq("id", lead_id)
+          .eq("user_id", user.id);
       }
       return NextResponse.json({ error: failMsg }, { status: 400 });
     }
@@ -138,7 +144,8 @@ export async function POST(request: NextRequest) {
       await supabase
         .from("social_campaign_leads")
         .update({ status: "failed", error_message: errMsg.slice(0, 200) })
-        .eq("id", lead_id);
+        .eq("id", lead_id)
+        .eq("user_id", user.id);
     }
 
     return NextResponse.json({ error: errMsg }, { status: sendRes.status });
@@ -147,7 +154,7 @@ export async function POST(request: NextRequest) {
   const sendData = await sendRes.json() as { data?: { dm_event_id?: string } };
   const platformMessageId = sendData?.data?.dm_event_id ?? null;
 
-  // Update lead status
+  // Update lead status — filter by user_id to prevent IDOR
   if (lead_id) {
     await supabase
       .from("social_campaign_leads")
@@ -156,21 +163,24 @@ export async function POST(request: NextRequest) {
         sent_at:             new Date().toISOString(),
         platform_message_id: platformMessageId,
       })
-      .eq("id", lead_id);
+      .eq("id", lead_id)
+      .eq("user_id", user.id);
   }
 
-  // Increment campaign sent_count
+  // Increment campaign sent_count — filter by user_id to prevent IDOR
   if (campaign_id) {
     const { data: camp } = await supabase
       .from("social_campaigns")
       .select("sent_count")
       .eq("id", campaign_id)
+      .eq("user_id", user.id)
       .single();
     if (camp) {
       await supabase
         .from("social_campaigns")
         .update({ sent_count: camp.sent_count + 1 })
-        .eq("id", campaign_id);
+        .eq("id", campaign_id)
+        .eq("user_id", user.id);
     }
   }
 

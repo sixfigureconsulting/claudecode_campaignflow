@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { encryptApiKey, decryptApiKey, maskApiKey } from "@/lib/encryption";
-import { integrationConfigSchema } from "@/lib/validations";
+import { integrationConfigSchema, INTEGRATION_SERVICES } from "@/lib/validations";
 
 // Find or create the user's default project to store global integration keys
 async function getOrCreateGlobalProject(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
@@ -100,6 +100,9 @@ export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const service = searchParams.get("service");
   if (!service) return NextResponse.json({ error: "Missing service" }, { status: 400 });
+  if (!(INTEGRATION_SERVICES as readonly string[]).includes(service)) {
+    return NextResponse.json({ error: "Invalid service" }, { status: 400 });
+  }
 
   const projectId = await getOrCreateGlobalProject(supabase, user.id);
   if (!projectId) return NextResponse.json({ success: true });

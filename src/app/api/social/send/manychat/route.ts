@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/social/send/manychat
 // Sends an Instagram DM via ManyChat API.
@@ -19,6 +20,10 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 60 DMs per user per 5 minutes
+  const rl = rateLimit(`manychat-send:${user.id}`, { limit: 60, windowMs: 5 * 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const body = await request.json() as {
     campaign_id:      string;
@@ -65,7 +70,8 @@ export async function POST(request: NextRequest) {
           status:        "failed",
           error_message: `ManyChat subscriber lookup ${findRes.status}: ${errText.slice(0, 200)}`,
         })
-        .eq("id", lead_id);
+        .eq("id", lead_id)
+          .eq("user_id", user.id);
     }
     return NextResponse.json(
       { error: `ManyChat subscriber lookup failed: ${findRes.status}`, detail: errText },
@@ -84,7 +90,8 @@ export async function POST(request: NextRequest) {
           status:        "skipped",
           error_message: "Instagram user is not a ManyChat subscriber (they haven't messaged your IG account yet)",
         })
-        .eq("id", lead_id);
+        .eq("id", lead_id)
+        .eq("user_id", user.id);
     }
     return NextResponse.json(
       { error: "Instagram user not found as a ManyChat subscriber" },
@@ -118,7 +125,8 @@ export async function POST(request: NextRequest) {
           status:        "failed",
           error_message: `ManyChat send ${sendRes.status}: ${errText.slice(0, 200)}`,
         })
-        .eq("id", lead_id);
+        .eq("id", lead_id)
+        .eq("user_id", user.id);
     }
     return NextResponse.json(
       { error: `ManyChat send error: ${sendRes.status}`, detail: errText },
@@ -129,7 +137,7 @@ export async function POST(request: NextRequest) {
   const sendData = await sendRes.json() as { status: string; data?: { message_id?: string } };
   const platformMessageId = sendData.data?.message_id ?? null;
 
-  // Update lead status to sent
+  // Update lead status to sent — filter by user_id to prevent IDOR
   if (lead_id) {
     await supabase
       .from("social_campaign_leads")
@@ -138,21 +146,24 @@ export async function POST(request: NextRequest) {
         sent_at:             new Date().toISOString(),
         platform_message_id: platformMessageId,
       })
-      .eq("id", lead_id);
+      .eq("id", lead_id)
+      .eq("user_id", user.id);
   }
 
-  // Increment campaign sent_count
+  // Increment campaign sent_count — filter by user_id to prevent IDOR
   if (campaign_id) {
     const { data: camp } = await supabase
       .from("social_campaigns")
       .select("sent_count")
       .eq("id", campaign_id)
+      .eq("user_id", user.id)
       .single();
     if (camp) {
       await supabase
         .from("social_campaigns")
         .update({ sent_count: camp.sent_count + 1 })
-        .eq("id", campaign_id);
+        .eq("id", campaign_id)
+        .eq("user_id", user.id);
     }
   }
 

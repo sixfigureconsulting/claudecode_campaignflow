@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getGlobalApiConfig, getApiKey } from "@/lib/api/get-integration-config";
 import { forwardEventToOutboundSync } from "@/lib/integrations/outboundsync";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 
@@ -32,6 +33,10 @@ export async function POST(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: 60 classifications per user per 5 minutes
+  const rl = rateLimit(`inbox-classify:${user.id}`, { limit: 60, windowMs: 5 * 60_000 });
+  if (!rl.success) return rateLimitResponse(rl.resetAt);
 
   const { id } = await params;
 

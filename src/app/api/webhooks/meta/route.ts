@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { createHmac, timingSafeEqual } from "crypto";
 
 const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "";
@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const supabase = await createClient();
+  // Use service client — Meta webhook invocations have no session cookie
+  const supabase = createServiceClient();
 
   for (const entry of (body.entry as unknown[]) ?? []) {
     const e = entry as Record<string, unknown>;

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireCredits, deductCredits } from "@/lib/credits";
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limit: 3 super agent sessions per user per hour (each costs 50 credits + runs for up to 5 minutes)
+    const rl = rateLimit(`super-agent-session:${user.id}`, { limit: 3, windowMs: 60 * 60_000 });
+    if (!rl.success) return rateLimitResponse(rl.resetAt);
 
     const body = await request.json();
     const { offer, icp, goals, channels } = body as {
