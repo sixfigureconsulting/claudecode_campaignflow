@@ -17,7 +17,7 @@ export function LandingPricing() {
       <div className="max-w-[1000px] mx-auto">
         <div className="text-center mb-14">
           <p className="text-brand-600 text-sm font-semibold tracking-[0.1em] uppercase mb-3">Pricing</p>
-          <h2 className="text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
+          <h2 className="text-3xl sm:text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
             One plan. Everything included.
           </h2>
         </div>
@@ -27,7 +27,7 @@ export function LandingPricing() {
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-[30px]">
             <p className="text-sm font-semibold text-gray-500 mb-1.5">Monthly</p>
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-[46px] font-bold tracking-tight tabular-nums">$97</span>
+              <span className="text-[38px] sm:text-[46px] font-bold tracking-tight tabular-nums">$97</span>
               <span className="text-gray-500 text-sm">/month</span>
             </div>
             <Link href="/signup">
@@ -46,7 +46,7 @@ export function LandingPricing() {
             </div>
             <p className="text-sm font-semibold text-brand-600 mb-1.5">Annual</p>
             <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-[46px] font-bold tracking-tight tabular-nums">$497</span>
+              <span className="text-[38px] sm:text-[46px] font-bold tracking-tight tabular-nums">$497</span>
               <span className="text-gray-500 text-sm">/year</span>
             </div>
             <Link href="/signup">
@@ -64,7 +64,7 @@ function PricingFeatureList() {
   return (
     <ul className="flex flex-col gap-2.5">
       {FEATURES.map((f) => (
-        <li key={f} className="flex items-start gap-2 text-[13px] text-gray-700">
+        <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
           <span className="w-4 h-4 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0 mt-0.5">
             <Check className="h-2.5 w-2.5" strokeWidth={3} />
           </span>
