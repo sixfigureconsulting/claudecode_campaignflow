@@ -2,7 +2,7 @@ import { TrendingUp } from "lucide-react";
 
 export function LandingFooter() {
   return (
-    <footer className="bg-[#0a0f1c] text-gray-400 py-10 px-6 text-[13px]">
+    <footer className="bg-[#0a0f1c] text-gray-400 py-10 px-6 text-sm">
       <div className="max-w-[1120px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center gap-2.5 text-white">

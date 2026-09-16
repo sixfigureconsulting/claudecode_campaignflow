@@ -57,7 +57,7 @@ export function LandingHero() {
         </div>
 
         {/* Trust line */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center text-[13px] text-brand-300 mb-16">
+        <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center text-sm text-brand-300 mb-16">
           {["No credit card required", "7-day free trial", "Cancel anytime"].map((t, i) => (
             <span key={i} className="inline-flex items-center gap-1.5">
               <Check className="h-3.5 w-3.5" /> {t}
@@ -75,7 +75,7 @@ export function LandingHero() {
           </div>
 
           {/* Stat cards */}
-          <div className="grid grid-cols-5 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
             {FUNNEL_STATS.map((s) => (
               <div key={s.label} className="border border-gray-100 rounded-[10px] px-3 py-3">
                 <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mb-1">

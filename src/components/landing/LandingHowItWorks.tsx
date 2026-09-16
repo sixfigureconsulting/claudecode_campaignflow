@@ -34,7 +34,7 @@ export function LandingHowItWorks() {
           <p className="text-brand-600 text-sm font-semibold tracking-[0.1em] uppercase mb-3">
             How it works
           </p>
-          <h2 className="text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
+          <h2 className="text-3xl sm:text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
             From CSV to pipeline in five steps
           </h2>
         </div>
@@ -52,8 +52,8 @@ export function LandingHowItWorks() {
                 {step.step}
               </div>
               <div className="flex-1 pt-1.5">
-                <h3 className="text-[20px] font-semibold text-gray-900 tracking-tight mb-1.5">{step.title}</h3>
-                <p className="text-[15px] text-gray-500 leading-relaxed">{step.description}</p>
+                <h3 className="text-lg sm:text-[20px] font-semibold text-gray-900 tracking-tight mb-1.5">{step.title}</h3>
+                <p className="text-base text-gray-500 leading-relaxed">{step.description}</p>
               </div>
             </div>
           ))}

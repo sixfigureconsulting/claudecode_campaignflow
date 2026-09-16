@@ -74,7 +74,7 @@ export function LandingFeatures() {
       <div className="max-w-[1120px] mx-auto">
         <div className="text-center mb-14">
           <p className="text-brand-600 text-sm font-semibold tracking-[0.1em] uppercase mb-3">Features</p>
-          <h2 className="text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
+          <h2 className="text-3xl sm:text-[40px] font-bold text-gray-900 leading-[1.15] tracking-tight mb-3">
             Everything you need to run tighter outbound
           </h2>
           <p className="text-[17px] text-gray-500 max-w-[620px] mx-auto">
@@ -91,8 +91,8 @@ export function LandingFeatures() {
               <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-[14px] ${feature.iconBg} ${feature.iconColor}`}>
                 <feature.icon className="h-[18px] w-[18px]" />
               </div>
-              <h3 className="font-semibold text-[15px] text-gray-900 mb-1.5 tracking-tight">{feature.title}</h3>
-              <p className="text-sm text-gray-500 leading-[1.55]">{feature.description}</p>
+              <h3 className="font-semibold text-base text-gray-900 mb-1.5 tracking-tight">{feature.title}</h3>
+              <p className="text-[15px] text-gray-500 leading-[1.55]">{feature.description}</p>
             </div>
           ))}
         </div>

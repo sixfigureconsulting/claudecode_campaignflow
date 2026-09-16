@@ -21,7 +21,7 @@ export function LandingProblem() {
           <p className="text-red-300 text-sm font-semibold tracking-[0.1em] uppercase mb-3">
             The Problem
           </p>
-          <h2 className="text-[42px] font-bold text-white leading-[1.15] tracking-tight mb-4">
+          <h2 className="text-3xl sm:text-[42px] font-bold text-white leading-[1.15] tracking-tight mb-4">
             You&rsquo;re flying blind on outbound.
           </h2>
           <p className="text-lg text-gray-400 max-w-[620px] mx-auto leading-relaxed">
@@ -37,8 +37,8 @@ export function LandingProblem() {
               className="px-6 py-6 rounded-xl"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              <h3 className="font-semibold text-[15px] text-white mb-2">{pain.title}</h3>
-              <p className="text-sm text-gray-400 leading-relaxed">{pain.description}</p>
+              <h3 className="font-semibold text-base text-white mb-2">{pain.title}</h3>
+              <p className="text-[15px] text-gray-400 leading-relaxed">{pain.description}</p>
             </div>
           ))}
         </div>
